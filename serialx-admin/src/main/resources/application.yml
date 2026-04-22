@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: serialx-admin
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SERIALX_MYSQL_URL:jdbc:mysql://127.0.0.1:3306/serialx?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${SERIALX_MYSQL_USERNAME:root}
+    password: ${SERIALX_MYSQL_PASSWORD:123456}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+serialx:
+  admin:
+    security:
+      jwt-secret: ${SERIALX_ADMIN_JWT_SECRET}
+      jwt-issuer: ${SERIALX_ADMIN_JWT_ISSUER:serialx-admin}
+      access-token-ttl: ${SERIALX_ADMIN_ACCESS_TOKEN_TTL:2h}
+      bootstrap-username: ${SERIALX_ADMIN_BOOTSTRAP_USERNAME:}
+      bootstrap-password: ${SERIALX_ADMIN_BOOTSTRAP_PASSWORD:}

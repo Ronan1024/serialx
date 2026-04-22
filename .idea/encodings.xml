@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/serialx-admin/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-admin/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-common/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-common/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-infra/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-infra/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-sdk/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-sdk/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-web/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/serialx-web/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>

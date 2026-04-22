@@ -1,0 +1,18 @@
+/* Base styles for the application */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  height: 100%; /* Ensure body takes full height */
+  overflow: hidden; /* Prevent body scrollbars if layout handles its own scrolling */
+}
+
+html {
+  height: 100%; /* Ensure html takes full height */
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
