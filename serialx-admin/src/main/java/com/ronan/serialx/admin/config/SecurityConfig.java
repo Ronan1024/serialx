@@ -5,6 +5,7 @@ import com.ronan.serialx.admin.security.JwtAuthenticationFilter;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * 后台 Spring Security 配置。
  */
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -47,6 +49,8 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .exceptionHandling(configurer -> configurer
                         .authenticationEntryPoint((request, response, authException) -> {
+                            log.warn("admin authentication entry point triggered, uri={}, message={}",
+                                    request.getRequestURI(), authException.getMessage());
                             response.setStatus(401);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             objectMapper.writeValue(response.getWriter(), ApiResponse.fail(
@@ -54,6 +58,8 @@ public class SecurityConfig {
                                     BusinessErrorCode.ADMIN_UNAUTHORIZED.getMessage()));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            log.warn("admin access denied handler triggered, uri={}, message={}",
+                                    request.getRequestURI(), accessDeniedException.getMessage());
                             response.setStatus(403);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             objectMapper.writeValue(response.getWriter(), ApiResponse.fail(

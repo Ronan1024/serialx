@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 import com.ronan.serialx.admin.config.AdminSecurityProperties;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.BizException;
+import com.ronan.serialx.common.exception.UnauthorizedException;
 import com.ronan.serialx.common.error.SystemErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -81,7 +82,7 @@ public class JwtTokenManager {
                     claims.get("username", String.class),
                     claims.get("roles", String.class));
         } catch (IllegalArgumentException | JwtException ex) {
-            throw BizException.unauthorized(
+            throw new UnauthorizedException(
                     BusinessErrorCode.ADMIN_TOKEN_INVALID, BusinessErrorCode.ADMIN_TOKEN_INVALID.getMessage());
         }
     }

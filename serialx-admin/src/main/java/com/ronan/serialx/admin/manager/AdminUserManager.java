@@ -3,6 +3,7 @@ package com.ronan.serialx.admin.manager;
 import java.util.List;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ronan.serialx.admin.convert.AdminUserConvert;
 import com.ronan.serialx.admin.dto.AdminUserCreateRequest;
 import com.ronan.serialx.admin.dto.AdminUserPasswordRequest;
 import com.ronan.serialx.admin.dto.AdminUserResponse;
@@ -146,17 +147,6 @@ public class AdminUserManager {
      * 将持久化对象转换为接口响应对象。
      */
     public AdminUserResponse toResponse(AdminUserDO user) {
-        return AdminUserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .displayName(user.getDisplayName())
-                .email(user.getEmail())
-                .mobile(user.getMobile())
-                .status(user.getStatus())
-                .roles(user.getRoles())
-                .lastLoginAt(user.getLastLoginAt())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
+        return AdminUserConvert.INSTANCE.toResponse(user);
     }
 }

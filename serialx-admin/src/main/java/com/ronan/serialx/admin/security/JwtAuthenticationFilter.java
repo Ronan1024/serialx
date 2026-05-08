@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ronan.serialx.admin.service.AdminUserService;
 import com.ronan.serialx.common.enums.AdminUserStatusEnum;
 import com.ronan.serialx.common.error.BusinessErrorCode;
-import com.ronan.serialx.common.exception.BizException;
+import com.ronan.serialx.common.exception.UnauthorizedException;
 import com.ronan.serialx.common.response.ApiResponse;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 import jakarta.servlet.FilterChain;
@@ -14,6 +14,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Bearer Token 认证过滤器。
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -68,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             AdminUserPrincipal principal = jwtTokenManager.parse(authorization.substring(BEARER_PREFIX.length()));
             AdminUserDO user = adminUserService.getById(principal.getUserId());
             if (user == null || !AdminUserStatusEnum.isEnabled(user.getStatus())) {
-                throw BizException.unauthorized(
+                throw new UnauthorizedException(
                         BusinessErrorCode.ADMIN_TOKEN_INVALID, BusinessErrorCode.ADMIN_TOKEN_INVALID.getMessage());
             }
             principal = new AdminUserPrincipal(user.getId(), user.getUsername(), user.getRoles());
@@ -76,8 +78,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     principal, null, principal.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);
-        } catch (BizException ex) {
+        } catch (UnauthorizedException ex) {
             SecurityContextHolder.clearContext();
+            log.warn("admin jwt authentication failed, uri={}, code={}, message={}",
+                    request.getRequestURI(), ex.getCode(), ex.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             objectMapper.writeValue(response.getWriter(), ApiResponse.fail(ex.getCode(), ex.getMessage()));
