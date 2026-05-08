@@ -49,7 +49,47 @@ public enum BusinessErrorCode implements ErrorCode {
     /**
      * 后台访问令牌无效。
      */
-    ADMIN_TOKEN_INVALID("B10010008", "invalid token");
+    ADMIN_TOKEN_INVALID("B10010008", "invalid token"),
+
+    /**
+     * Namespace 不存在。
+     */
+    NAMESPACE_NOT_FOUND("B10020001", "namespace not found"),
+
+    /**
+     * Namespace 编码已存在。
+     */
+    NAMESPACE_CODE_EXISTS("B10020002", "namespace code already exists"),
+
+    /**
+     * Namespace 状态非法。
+     */
+    NAMESPACE_STATUS_INVALID("B10020003", "namespace status invalid"),
+
+    /**
+     * Namespace 配置非法。
+     */
+    NAMESPACE_CONFIG_INVALID("B10020004", "namespace config invalid"),
+
+    /**
+     * Namespace 发布失败。
+     */
+    NAMESPACE_PUBLISH_FAILED("B10020005", "namespace publish failed"),
+
+    /**
+     * Namespace 回滚失败。
+     */
+    NAMESPACE_ROLLBACK_FAILED("B10020006", "namespace rollback failed"),
+
+    /**
+     * Namespace 删除被禁止。
+     */
+    NAMESPACE_DELETE_FORBIDDEN("B10020007", "namespace delete forbidden"),
+
+    /**
+     * Namespace 版本不存在。
+     */
+    NAMESPACE_VERSION_NOT_FOUND("B10020008", "namespace version not found");
 
     /**
      * 业务异常码。
