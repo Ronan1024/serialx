@@ -2,9 +2,11 @@ package com.ronan.serialx.admin.convert;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ronan.serialx.admin.dto.NamespaceChangeLogResponse;
+import com.ronan.serialx.admin.dto.NamespaceCreateRequest;
 import com.ronan.serialx.admin.dto.NamespaceResponse;
 import com.ronan.serialx.admin.dto.ServiceInstanceConfigStatusResponse;
 import com.ronan.serialx.infra.entity.NamespaceChangeLogDO;
+import com.ronan.serialx.infra.entity.NamespaceConfigDO;
 import com.ronan.serialx.infra.entity.NamespaceDO;
 import com.ronan.serialx.infra.entity.ServiceInstanceConfigStatusDO;
 import org.mapstruct.Mapper;
@@ -50,4 +52,22 @@ public interface NamespaceConvert {
      * 将 Service 实例配置状态持久化对象转换为响应对象。
      */
     ServiceInstanceConfigStatusResponse toInstanceStatusResponse(ServiceInstanceConfigStatusDO status);
+
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "currentVersion", expression = "java(0)")
+    @Mapping(target = "owner", expression = "java(request.getOwner().trim())")
+    @Mapping(target = "namespaceCode", expression = "java(request.getNamespaceCode().trim())")
+    @Mapping(target = "namespaceName", expression = "java(request.getNamespaceName().trim())")
+    @Mapping(target = "status", expression = "java(com.ronan.serialx.common.enums.NamespaceStatusEnum.DRAFT.getCode())")
+    NamespaceDO toNamespaceDO(NamespaceCreateRequest request);
+
+    @Mapping(target = "namespaceId", source = "id")
+    @Mapping(target = "version", source = "nextVersion")
+    @Mapping(target = "publishStatus", expression = "java(com.ronan.serialx.common.enums.NamespacePublishStatusEnum.PUBLISHED.getCode())")
+    @Mapping(target = "publishedAt", expression = "java(java.time.LocalDateTime.now())")
+    @Mapping(target = "publishedBy", ignore = true)
+    NamespaceConfigDO toNamespaceConfigDO(Long id, int nextVersion, NamespaceConfigDO editingConfig);
 }

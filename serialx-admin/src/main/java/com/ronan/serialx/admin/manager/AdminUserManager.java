@@ -13,6 +13,7 @@ import com.ronan.serialx.common.enums.AdminUserStatusEnum;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.BizException;
 import com.ronan.serialx.common.response.PageResult;
+import com.ronan.serialx.common.util.Assert;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -61,10 +62,7 @@ public class AdminUserManager {
      * 创建后台用户。
      */
     public AdminUserResponse createUser(AdminUserCreateRequest request) {
-        if (adminUserService.existsByUsername(request.getUsername())) {
-            throw BizException.conflict(
-                    BusinessErrorCode.ADMIN_USERNAME_EXISTS, BusinessErrorCode.ADMIN_USERNAME_EXISTS.getMessage());
-        }
+        Assert.isFalse(adminUserService.existsByUsername(request.getUsername()), BusinessErrorCode.ADMIN_USERNAME_EXISTS);
         AdminUserDO user = new AdminUserDO();
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -112,10 +110,7 @@ public class AdminUserManager {
      */
     private AdminUserDO requireUser(Long id) {
         AdminUserDO user = adminUserService.getById(id);
-        if (user == null) {
-            throw BizException.notFound(
-                    BusinessErrorCode.ADMIN_USER_NOT_FOUND, BusinessErrorCode.ADMIN_USER_NOT_FOUND.getMessage());
-        }
+        Assert.notNull(user, BizException.supplier(BusinessErrorCode.ADMIN_USER_NOT_FOUND));
         return user;
     }
 
@@ -123,10 +118,7 @@ public class AdminUserManager {
      * 校验后台用户状态码。
      */
     private void validateStatus(Integer status) {
-        if (status != null && !AdminUserStatusEnum.contains(status)) {
-            throw BizException.badRequest(
-                    BusinessErrorCode.ADMIN_PARAM_INVALID, BusinessErrorCode.ADMIN_PARAM_INVALID.getMessage());
-        }
+        Assert.isFalse(status != null && !AdminUserStatusEnum.contains(status), BusinessErrorCode.ADMIN_PARAM_INVALID);
     }
 
     /**

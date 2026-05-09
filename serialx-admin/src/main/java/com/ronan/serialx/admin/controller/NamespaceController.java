@@ -70,8 +70,7 @@ public class NamespaceController {
      * 更新 Namespace 基础信息。
      */
     @PutMapping("/{id}")
-    public ApiResponse<NamespaceResponse> updateNamespace(
-            @PathVariable Long id, @Valid @RequestBody NamespaceUpdateRequest request) {
+    public ApiResponse<NamespaceResponse> updateNamespace(@PathVariable Long id, @Validated @RequestBody NamespaceUpdateRequest request) {
         return ApiResponse.success(namespaceManager.updateNamespace(id, request));
     }
 
@@ -79,8 +78,7 @@ public class NamespaceController {
      * 保存草稿配置。
      */
     @PutMapping("/{id}/config")
-    public ApiResponse<NamespaceResponse> saveDraftConfig(
-            @PathVariable Long id, @Valid @RequestBody NamespaceDraftConfigRequest request) {
+    public ApiResponse<NamespaceResponse> saveDraftConfig(@PathVariable Long id, @Valid @RequestBody NamespaceDraftConfigRequest request) {
         return ApiResponse.success(namespaceManager.saveDraftConfig(id, request));
     }
 

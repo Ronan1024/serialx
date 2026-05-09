@@ -43,7 +43,8 @@ public class JwtTokenManager {
     void init() {
         String secret = properties.getJwtSecret();
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw BizException.system(SystemErrorCode.CONFIG_ERROR,
+            throw new BizException(
+                    SystemErrorCode.CONFIG_ERROR.getCode(),
                     "serialx.admin.security.jwt-secret must be at least 32 bytes");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

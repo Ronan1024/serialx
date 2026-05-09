@@ -2,6 +2,8 @@ package com.ronan.serialx.common.exception;
 
 import lombok.Getter;
 
+import java.util.function.Supplier;
+
 /**
  * 业务异常，携带可返回给客户端的错误码。
  */
@@ -27,6 +29,27 @@ public class BizException extends RuntimeException {
         this.httpStatus = httpStatus;
     }
 
+
+
+    /**
+     * 创建业务异常。
+     */
+    public BizException(String errorCode, String message) {
+        super(message);
+        this.errorCode = new ErrorCode() {
+            @Override
+            public String getCode() {
+                return errorCode;
+            }
+
+            @Override
+            public String getMessage() {
+                return message;
+            }
+        };
+
+    }
+
     /**
      * 获取异常码。
      */
@@ -34,45 +57,11 @@ public class BizException extends RuntimeException {
         return errorCode.getCode();
     }
 
-    /**
-     * 创建请求参数错误异常。
-     */
-    public static BizException badRequest(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 400, message);
+    public static Supplier<? extends RuntimeException> supplier(ErrorCode errorCode){
+        return ()-> new BizException(errorCode);
     }
 
-    /**
-     * 创建未认证异常。
-     */
-    public static BizException unauthorized(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 401, message);
-    }
-
-    /**
-     * 创建无权限异常。
-     */
-    public static BizException forbidden(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 403, message);
-    }
-
-    /**
-     * 创建资源不存在异常。
-     */
-    public static BizException notFound(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 404, message);
-    }
-
-    /**
-     * 创建资源冲突异常。
-     */
-    public static BizException conflict(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 409, message);
-    }
-
-    /**
-     * 创建系统配置异常。
-     */
-    public static BizException system(ErrorCode errorCode, String message) {
-        return new BizException(errorCode, 500, message);
+    public static Supplier<? extends RuntimeException> supplier(String code, String message){
+        return ()-> new BizException(code, message);
     }
 }

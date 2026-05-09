@@ -21,6 +21,5 @@ public class NamespaceDraftConfigRequest {
     /**
      * 草稿配置。
      */
-    @NotNull
     private JsonNode config;
 }
