@@ -64,6 +64,7 @@ public interface NamespaceConvert {
     @Mapping(target = "status", expression = "java(com.ronan.serialx.common.enums.NamespaceStatusEnum.DRAFT.getCode())")
     NamespaceDO toNamespaceDO(NamespaceCreateRequest request);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "namespaceId", source = "id")
     @Mapping(target = "version", source = "nextVersion")
     @Mapping(target = "publishStatus", expression = "java(com.ronan.serialx.common.enums.NamespacePublishStatusEnum.PUBLISHED.getCode())")

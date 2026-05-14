@@ -46,4 +46,9 @@ public class ServiceInstanceConfigStatusResponse {
      * 最后上报时间。
      */
     private LocalDateTime lastReportTime;
+
+    /**
+     * 最近判定离线时间。
+     */
+    private LocalDateTime lastOfflineTime;
 }

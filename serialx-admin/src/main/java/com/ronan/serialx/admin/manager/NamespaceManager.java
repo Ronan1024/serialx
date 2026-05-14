@@ -10,6 +10,7 @@ import com.ronan.serialx.admin.dto.NamespaceCreateRequest;
 import com.ronan.serialx.admin.dto.NamespaceDraftConfigRequest;
 import com.ronan.serialx.admin.dto.NamespaceResponse;
 import com.ronan.serialx.admin.dto.NamespaceUpdateRequest;
+import com.ronan.serialx.admin.dto.NamespaceVersionResponse;
 import com.ronan.serialx.admin.dto.ServiceInstanceConfigStatusResponse;
 import com.ronan.serialx.admin.manager.support.config.NamespaceConfigHandlerRegistry;
 import com.ronan.serialx.admin.manager.support.NamespaceRequestValidator;
@@ -208,6 +209,7 @@ public class NamespaceManager {
         if (NamespaceStatusEnum.DRAFT.getCode().equals(namespace.getStatus())) {
             namespace.setStatus(NamespaceStatusEnum.ENABLED.getCode());
         }
+        namespace.setCurrentVersion(nextVersion);
 
         String snapshot = namespaceSnapshotSupport.snapshot(namespace, publishedConfig);
         namespaceService.update(namespace);
@@ -297,6 +299,16 @@ public class NamespaceManager {
     }
 
     /**
+     * 查询 Namespace 已发布版本。
+     */
+    public List<NamespaceVersionResponse> listPublishedVersions(Long id) {
+        requireNamespace(id);
+        return namespaceConfigService.listPublishedConfigs(id).stream()
+                .map(this::toVersionResponse)
+                .toList();
+    }
+
+    /**
      * 查询 Namespace 实例状态。
      */
     public List<ServiceInstanceConfigStatusResponse> listInstanceStatuses(Long id) {
@@ -346,6 +358,20 @@ public class NamespaceManager {
 
     private ServiceInstanceConfigStatusResponse toInstanceStatusResponse(ServiceInstanceConfigStatusDO status) {
         return NamespaceConvert.INSTANCE.toInstanceStatusResponse(status);
+    }
+
+    private NamespaceVersionResponse toVersionResponse(NamespaceConfigDO config) {
+        NamespaceIdModeEnum idModeEnum = NamespaceIdModeEnum.fromCode(config.getIdMode());
+        return NamespaceVersionResponse.builder()
+                .version(config.getVersion())
+                .idMode(config.getIdMode())
+                .idModeName(idModeEnum == null ? null : idModeEnum.getName())
+                .config(namespaceSnapshotSupport.readJson(config.getConfigJson()))
+                .configChecksum(config.getConfigChecksum())
+                .operator(config.getPublishedBy())
+                .publishedAt(config.getPublishedAt())
+                .createdAt(config.getCreatedAt())
+                .build();
     }
 
     private String normalizeRemark(String remark) {

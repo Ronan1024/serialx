@@ -7,6 +7,7 @@ import com.ronan.serialx.admin.dto.NamespaceCreateRequest;
 import com.ronan.serialx.admin.dto.NamespaceDraftConfigRequest;
 import com.ronan.serialx.admin.dto.NamespaceResponse;
 import com.ronan.serialx.admin.dto.NamespaceUpdateRequest;
+import com.ronan.serialx.admin.dto.NamespaceVersionResponse;
 import com.ronan.serialx.admin.dto.ServiceInstanceConfigStatusResponse;
 import com.ronan.serialx.admin.manager.NamespaceManager;
 import com.ronan.serialx.common.response.ApiResponse;
@@ -129,6 +130,14 @@ public class NamespaceController {
     @GetMapping("/{id}/logs")
     public ApiResponse<List<NamespaceChangeLogResponse>> listChangeLogs(@PathVariable Long id) {
         return ApiResponse.success(namespaceManager.listChangeLogs(id));
+    }
+
+    /**
+     * 查询 Namespace 已发布版本。
+     */
+    @GetMapping("/{id}/versions")
+    public ApiResponse<List<NamespaceVersionResponse>> listPublishedVersions(@PathVariable Long id) {
+        return ApiResponse.success(namespaceManager.listPublishedVersions(id));
     }
 
     /**

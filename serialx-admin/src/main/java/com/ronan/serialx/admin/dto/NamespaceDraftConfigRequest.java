@@ -1,6 +1,7 @@
 package com.ronan.serialx.admin.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,5 +22,6 @@ public class NamespaceDraftConfigRequest {
     /**
      * 草稿配置。
      */
+    @JsonAlias("draftConfig")
     private JsonNode config;
 }
