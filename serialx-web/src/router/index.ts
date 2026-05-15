@@ -1,10 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { isAuthenticated } from '@/utils/auth'
 import BaseLayout from '../components/layout/BaseLayout.vue'
-import DashboardView from '../views/DashboardView.vue'
-import LoginView from '../views/LoginView.vue'
-import NamespaceManagementView from '../views/NamespaceManagementView.vue'
-import UserManagementView from '../views/UserManagementView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,7 +8,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginView
+      component: () => import('../views/LoginView.vue')
     },
     {
       path: '/',
@@ -21,13 +17,13 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          component: DashboardView,
+          component: () => import('../views/DashboardView.vue'),
           meta: { title: '概览' }
         },
         {
           path: 'namespaces',
           name: 'namespaces',
-          component: NamespaceManagementView,
+          component: () => import('../views/NamespaceManagementView.vue'),
           meta: { title: 'Namespace 管理' }
         },
         {
@@ -69,7 +65,7 @@ const router = createRouter({
         {
           path: 'users',
           name: 'users',
-          component: UserManagementView,
+          component: () => import('../views/UserManagementView.vue'),
           meta: { title: '用户管理' }
         },
         {

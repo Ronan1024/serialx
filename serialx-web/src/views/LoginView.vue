@@ -93,8 +93,8 @@ const rememberMe = ref(true)
 const loginFormRef = ref<FormInstance>()
 
 const loginForm = reactive({
-  username: 'admin',
-  password: 'admin123',
+  username: '',
+  password: '',
 })
 
 const rules: FormRules = {
@@ -118,9 +118,9 @@ const handleLogin = async () => {
     ElMessage.success('欢迎回来，' + (result.user.displayName || result.user.username))
     await router.push('/')
   } catch (error: any) {
-    console.error('Login failed:', error)
-    const msg = error.response?.data?.message || '登录失败，请检查后台服务或账号密码'
-    ElMessage.error(msg)
+    if (error instanceof Error) {
+      console.error('Login failed:', error)
+    }
   } finally {
     loading.value = false
   }
