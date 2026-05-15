@@ -42,6 +42,10 @@ public class NamespaceConfigServiceImpl implements NamespaceConfigService {
 
     @Override
     public NamespaceConfigDO getPublishedConfig(Long namespaceId, Integer version) {
+        if (version == null || version <= 0) {
+            return null;
+        }
+
         return namespaceConfigMapper.selectOne(new LambdaQueryWrapper<NamespaceConfigDO>()
                 .eq(NamespaceConfigDO::getNamespaceId, namespaceId)
                 .eq(NamespaceConfigDO::getVersion, version)

@@ -2,6 +2,8 @@ package com.ronan.serialx.admin.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ronan.serialx.infra.entity.NamespaceDO;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Namespace 数据访问服务。
@@ -17,6 +19,11 @@ public interface NamespaceService {
      * 根据编码查询 Namespace。
      */
     NamespaceDO getByCode(String namespaceCode);
+
+    /**
+     * 根据编码批量查询 Namespace。
+     */
+    List<NamespaceDO> listByCodes(Collection<String> namespaceCodes);
 
     /**
      * 判断编码是否存在。

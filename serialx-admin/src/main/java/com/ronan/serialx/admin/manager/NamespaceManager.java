@@ -1,6 +1,7 @@
 package com.ronan.serialx.admin.manager;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -90,15 +91,13 @@ public class NamespaceManager {
      * 分页查询 Namespace。
      */
     public PageResult<NamespaceResponse> pageNamespaces(long pageNo, long pageSize, String keyword, Integer status, Integer idMode) {
-        namespaceRequestValidator.validateStatus(status);
-        namespaceRequestValidator.validateIdMode(idMode);
 
-        long normalizedPageNo = Math.max(pageNo, 1);
-        long normalizedPageSize = Math.min(Math.max(pageSize, 1), 100);
-        Page<NamespaceDO> page = namespaceService.pageNamespaces(normalizedPageNo, normalizedPageSize, keyword, status, idMode);
-        List<NamespaceResponse> records = page.getRecords().stream()
-                .map(this::toResponse)
-                .toList();
+        Assert.isFalse(status != null && !NamespaceStatusEnum.contains(status), BusinessErrorCode.NAMESPACE_STATUS_INVALID);
+        Assert.isFalse(idMode != null && !NamespaceIdModeEnum.contains(idMode), BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
+
+        Page<NamespaceDO> page = namespaceService.pageNamespaces(Math.max(pageNo, 1), Math.min(Math.max(pageSize, 1), 100), keyword, status, idMode);
+
+        List<NamespaceResponse> records = page.getRecords().stream().map(this::toResponse).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), records);
     }
 
@@ -114,14 +113,16 @@ public class NamespaceManager {
      */
     @Transactional(rollbackFor = Exception.class)
     public NamespaceResponse createNamespace(NamespaceCreateRequest request) {
+        String namespaceCode = request.getNamespaceCode();
         Assert.isFalse(!ObjectUtils.isEmpty(request.getIdMode()) && !NamespaceIdModeEnum.contains(request.getIdMode()),
                 BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
 
-        namespaceRequestValidator.validateNamespaceCode(request.getNamespaceCode());
+        Assert.isTrue(StringUtils.hasText(namespaceCode) && namespaceCode.trim().matches("^[a-zA-Z][a-zA-Z0-9_\\-]{2,63}$"),
+                BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
 
         JsonNode normalizedConfig = namespaceConfigHandlerRegistry.normalize(request.getIdMode(), request.getConfig());
 
-        Assert.isFalse(namespaceService.existsByCode(request.getNamespaceCode().trim()), BusinessErrorCode.NAMESPACE_CODE_EXISTS);
+        Assert.isFalse(namespaceService.existsByCode(namespaceCode.trim()), BusinessErrorCode.NAMESPACE_CODE_EXISTS);
 
         request.setRemark(StringUtils.hasText(request.getRemark()) ? request.getRemark().trim() : null);
         NamespaceDO namespace = NamespaceConvert.INSTANCE.toNamespaceDO(request);
@@ -129,6 +130,7 @@ public class NamespaceManager {
 
         NamespaceConfigDO draftConfig = namespaceSnapshotSupport.buildDraftConfig(namespace.getId(), request.getIdMode(), normalizedConfig);
         namespaceConfigService.create(draftConfig);
+
         createChangeLog(namespace.getId(), 0, NamespaceChangeActionEnum.CREATE, null,
                 namespaceSnapshotSupport.snapshot(namespace, draftConfig));
         return toResponse(requireNamespace(namespace.getId()));
@@ -192,7 +194,7 @@ public class NamespaceManager {
         NamespaceConfigDO editingConfig = namespaceConfigService.getEditingConfig(id);
 
         Assert.notNull(editingConfig,
-                BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace draft config not found"));
+                BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "找不到命名空间草图配置"));
 
         namespaceConfigHandlerRegistry.normalize(
                 editingConfig.getIdMode(), namespaceSnapshotSupport.readJson(editingConfig.getConfigJson()));
@@ -246,8 +248,7 @@ public class NamespaceManager {
     @Transactional(rollbackFor = Exception.class)
     public NamespaceResponse disableNamespace(Long id) {
         NamespaceDO namespace = requireNamespace(id);
-        String before =
-                namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
+        String before = namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
         namespace.setStatus(NamespaceStatusEnum.DISABLED.getCode());
         namespaceService.update(namespace);
         createChangeLog(id, namespace.getCurrentVersion(), NamespaceChangeActionEnum.DISABLE, before,
@@ -324,28 +325,35 @@ public class NamespaceManager {
         return namespace;
     }
 
-    private void createChangeLog(
-            Long namespaceId, Integer version, NamespaceChangeActionEnum action, String beforeJson, String afterJson) {
+
+    /**
+     * 创建变更记录信息
+     *
+     * @param namespaceId 命名空间ID
+     * @param version     版本号
+     * @param action      变更动作
+     * @param beforeJson  变更前的JSON数据
+     * @param afterJson   变更后的JSON数据
+     */
+    private void createChangeLog(Long namespaceId, Integer version, NamespaceChangeActionEnum action, String beforeJson, String afterJson) {
         NamespaceChangeLogDO changeLog = NamespaceChangeLogDO.builder()
-                .namespaceId(namespaceId)
-                .version(version == null ? 0 : version)
-                .actionType(action.getCode())
-                .beforeJson(beforeJson)
-                .afterJson(afterJson)
-                .operator(AdminSecurityContextUtils.currentUsername())
+                .namespaceId(namespaceId).version(version == null ? 0 : version)
+                .actionType(action.getCode()).beforeJson(beforeJson)
+                .afterJson(afterJson).operator(AdminSecurityContextUtils.currentUsername())
                 .build();
         namespaceChangeLogService.create(changeLog);
     }
 
     private NamespaceResponse toResponse(NamespaceDO namespace) {
         NamespaceConfigDO draftConfig = namespaceConfigService.getEditingConfig(namespace.getId());
-        NamespaceConfigDO publishedConfig = namespace.getCurrentVersion() != null && namespace.getCurrentVersion() > 0
-                ? namespaceConfigService.getPublishedConfig(namespace.getId(), namespace.getCurrentVersion())
-                : null;
+        NamespaceConfigDO publishedConfig = namespaceConfigService.getPublishedConfig(namespace.getId(), namespace.getCurrentVersion());
+
         JsonNode draftConfigNode = draftConfig == null ? null : namespaceSnapshotSupport.readJson(draftConfig.getConfigJson());
-        JsonNode publishedConfigNode = publishedConfig == null
-                ? null
-                : namespaceSnapshotSupport.readJson(publishedConfig.getConfigJson());
+
+        JsonNode publishedConfigNode = Optional.ofNullable(publishedConfig)
+                .map(e -> namespaceSnapshotSupport.readJson(e.getConfigJson())).orElse(null);
+
+
         return NamespaceConvert.INSTANCE.toResponse(namespace, draftConfigNode, publishedConfigNode);
     }
 
@@ -378,6 +386,13 @@ public class NamespaceManager {
         return StringUtils.hasText(remark) ? remark.trim() : null;
     }
 
+    /**
+     * 发布命名空间变更通知
+     *
+     * @param namespaceCode 命名空间代码
+     * @param version       版本号
+     * @param action        变更动作
+     */
     private void notifyChange(String namespaceCode, Integer version, NamespaceChangeActionEnum action) {
         namespaceChangePublisher.publish(NamespaceChangeMessage.builder()
                 .namespaceCode(namespaceCode)

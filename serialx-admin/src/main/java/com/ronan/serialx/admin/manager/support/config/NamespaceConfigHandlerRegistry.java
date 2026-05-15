@@ -7,6 +7,8 @@ import com.ronan.serialx.common.exception.BizException;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+
+import com.ronan.serialx.common.util.Assert;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,13 +29,11 @@ public class NamespaceConfigHandlerRegistry {
      */
     public JsonNode normalize(Integer idMode, JsonNode config) {
         NamespaceIdModeEnum mode = NamespaceIdModeEnum.fromCode(idMode);
-        if (mode == null) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace id mode invalid");
-        }
+        Assert.isNull(mode, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
+
         NamespaceConfigHandler<? extends NamespaceModeConfig> handler = handlers.get(mode);
-        if (handler == null) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "unsupported namespace id mode");
-        }
+        Assert.isNull(handler, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
+
         return handler.normalize(config);
     }
 }

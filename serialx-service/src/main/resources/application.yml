@@ -1,0 +1,41 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: serialx-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SERIALX_MYSQL_URL}
+    username: ${SERIALX_MYSQL_USERNAME}
+    password: ${SERIALX_MYSQL_PASSWORD}
+  data:
+    redis:
+      host: ${SERIALX_REDIS_HOST:localhost}
+      port: ${SERIALX_REDIS_PORT:6379}
+      password: ${SERIALX_REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+serialx:
+  service:
+    snowflake:
+      worker-id: ${SERIALX_SNOWFLAKE_WORKER_ID:0}
+      datacenter-id: ${SERIALX_SNOWFLAKE_DATACENTER_ID:0}
+      worker-id-bits: ${SERIALX_SNOWFLAKE_WORKER_ID_BITS:5}
+      datacenter-id-bits: ${SERIALX_SNOWFLAKE_DATACENTER_ID_BITS:5}
+      sequence-bits: ${SERIALX_SNOWFLAKE_SEQUENCE_BITS:12}
+    namespace:
+      refresh:
+        channel: ${SERIALX_NAMESPACE_CHANGE_CHANNEL:serialx:namespace:change}
+        full-sync-interval: ${SERIALX_NAMESPACE_FULL_SYNC_INTERVAL:30s}
+        report-interval: ${SERIALX_NAMESPACE_REPORT_INTERVAL:20s}
+        status-ttl: ${SERIALX_NAMESPACE_STATUS_TTL:24h}
+        instance-id: ${SERIALX_SERVICE_INSTANCE_ID}
+        host: ${SERIALX_SERVICE_HOST:${HOSTNAME:unknown}}
+        enabled: ${SERIALX_NAMESPACE_REFRESH_ENABLED:true}

@@ -32,14 +32,10 @@ public class NamespaceSnapshotSupport {
      * 构建草稿配置实体。
      */
     public NamespaceConfigDO buildDraftConfig(Long namespaceId, Integer idMode, JsonNode config) {
-        NamespaceConfigDO draftConfig = new NamespaceConfigDO();
-        draftConfig.setNamespaceId(namespaceId);
-        draftConfig.setVersion(0);
-        draftConfig.setIdMode(idMode);
-        draftConfig.setConfigJson(writeJson(config));
-        draftConfig.setConfigChecksum(calculateChecksum(draftConfig.getConfigJson()));
-        draftConfig.setPublishStatus(NamespacePublishStatusEnum.EDITING.getCode());
-        return draftConfig;
+        return NamespaceConfigDO.builder()
+                .namespaceId(namespaceId).idMode(idMode)
+                .version(0).configChecksum(calculateChecksum(writeJson(config)))
+                .publishStatus(NamespacePublishStatusEnum.EDITING.getCode()).build();
     }
 
     /**
@@ -60,7 +56,7 @@ public class NamespaceSnapshotSupport {
         try {
             return objectMapper.writeValueAsString(jsonNode);
         } catch (Exception ex) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace config serialize failed");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "命名空间配置序列化失败");
         }
     }
 

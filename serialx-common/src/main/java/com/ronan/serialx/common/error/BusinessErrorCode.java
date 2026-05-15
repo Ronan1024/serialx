@@ -54,42 +54,57 @@ public enum BusinessErrorCode implements ErrorCode {
     /**
      * Namespace 不存在。
      */
-    NAMESPACE_NOT_FOUND("B10020001", "namespace not found"),
+    NAMESPACE_NOT_FOUND("B10020001", "命名空间不存在"),
 
     /**
      * Namespace 编码已存在。
      */
-    NAMESPACE_CODE_EXISTS("B10020002", "namespace code already exists"),
+    NAMESPACE_CODE_EXISTS("B10020002", "命名空间编码已存在"),
 
     /**
      * Namespace 状态非法。
      */
-    NAMESPACE_STATUS_INVALID("B10020003", "namespace status invalid"),
+    NAMESPACE_STATUS_INVALID("B10020003", "命名空间状态异常"),
 
     /**
      * Namespace 配置非法。
      */
-    NAMESPACE_CONFIG_INVALID("B10020004", "namespace config invalid"),
+    NAMESPACE_CONFIG_INVALID("B10020004", "命名空间代码必须以字母开头，包含3-64个字母、数字，'_'或'-'"),
 
     /**
      * Namespace 发布失败。
      */
-    NAMESPACE_PUBLISH_FAILED("B10020005", "namespace publish failed"),
+    NAMESPACE_PUBLISH_FAILED("B10020005", "命名空间发布失败"),
 
     /**
      * Namespace 回滚失败。
      */
-    NAMESPACE_ROLLBACK_FAILED("B10020006", "namespace rollback failed"),
+    NAMESPACE_ROLLBACK_FAILED("B10020006", "命名空间回滚失败"),
 
     /**
      * Namespace 删除被禁止。
      */
-    NAMESPACE_DELETE_FORBIDDEN("B10020007", "namespace delete forbidden"),
+    NAMESPACE_DELETE_FORBIDDEN("B10020007", "命名空间删除被禁止"),
 
     /**
      * Namespace 版本不存在。
      */
-    NAMESPACE_VERSION_NOT_FOUND("B10020008", "namespace version not found");
+    NAMESPACE_VERSION_NOT_FOUND("B10020008", "命名空间版本不存在"),
+
+    /**
+     * 发号请求参数非法。
+     */
+    ID_GENERATE_PARAM_INVALID("B10030001", "id generate parameter invalid"),
+
+    /**
+     * Namespace 运行时未加载。
+     */
+    ID_NAMESPACE_NOT_READY("B10030002", "namespace runtime not ready"),
+
+    /**
+     * 发号失败。
+     */
+    ID_GENERATE_FAILED("B10030003", "id generate failed");
 
     /**
      * 业务异常码。

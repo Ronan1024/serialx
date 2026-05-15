@@ -10,6 +10,11 @@ import com.ronan.serialx.infra.entity.ServiceInstanceConfigStatusDO;
 public interface ServiceInstanceConfigStatusService {
 
     /**
+     * 查询全部实例状态。
+     */
+    List<ServiceInstanceConfigStatusDO> listAll();
+
+    /**
      * 按 Namespace 编码查询实例状态。
      */
     List<ServiceInstanceConfigStatusDO> listByNamespaceCode(String namespaceCode);

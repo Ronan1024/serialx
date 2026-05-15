@@ -1,7 +1,5 @@
 package com.ronan.serialx.admin.service.impl;
 
-import java.time.LocalDateTime;
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ronan.serialx.admin.service.NamespaceService;
@@ -10,6 +8,9 @@ import com.ronan.serialx.infra.mapper.NamespaceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Namespace 数据访问服务实现。
@@ -38,6 +39,16 @@ public class NamespaceServiceImpl implements NamespaceService {
     }
 
     @Override
+    public List<NamespaceDO> listByCodes(Collection<String> namespaceCodes) {
+        if (namespaceCodes == null || namespaceCodes.isEmpty()) {
+            return List.of();
+        }
+        return namespaceMapper.selectList(new LambdaQueryWrapper<NamespaceDO>()
+                .in(NamespaceDO::getNamespaceCode, namespaceCodes)
+                .eq(NamespaceDO::getDeleted, 0));
+    }
+
+    @Override
     public boolean existsByCode(String namespaceCode) {
         return namespaceMapper.selectCount(new LambdaQueryWrapper<NamespaceDO>()
                 .eq(NamespaceDO::getNamespaceCode, namespaceCode)
@@ -62,17 +73,12 @@ public class NamespaceServiceImpl implements NamespaceService {
 
     @Override
     public NamespaceDO create(NamespaceDO namespace) {
-        LocalDateTime now = LocalDateTime.now();
-        namespace.setDeleted(0);
-        namespace.setCreatedAt(now);
-        namespace.setUpdatedAt(now);
         namespaceMapper.insert(namespace);
         return namespace;
     }
 
     @Override
     public void update(NamespaceDO namespace) {
-        namespace.setUpdatedAt(LocalDateTime.now());
         namespaceMapper.updateById(namespace);
     }
 
@@ -81,7 +87,6 @@ public class NamespaceServiceImpl implements NamespaceService {
         NamespaceDO namespace = new NamespaceDO();
         namespace.setId(id);
         namespace.setDeleted(1);
-        namespace.setUpdatedAt(LocalDateTime.now());
         namespaceMapper.updateById(namespace);
     }
 }
