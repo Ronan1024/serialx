@@ -27,7 +27,7 @@ public class NamespaceRequestValidator {
     public void validateIdMode(Integer idMode) {
         Assert.isFalse(
                 idMode != null && !NamespaceIdModeEnum.contains(idMode),
-                BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace id mode invalid"));
+                BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "Namespace 发号模式非法"));
     }
 
     /**

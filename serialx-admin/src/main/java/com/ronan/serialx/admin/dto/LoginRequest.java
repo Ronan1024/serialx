@@ -14,12 +14,12 @@ public class LoginRequest {
     /**
      * 登录用户名。
      */
-    @NotBlank
+    @NotBlank(message = "用户名不能为空")
     private String username;
 
     /**
      * 登录密码明文。
      */
-    @NotBlank
+    @NotBlank(message = "密码不能为空")
     private String password;
 }

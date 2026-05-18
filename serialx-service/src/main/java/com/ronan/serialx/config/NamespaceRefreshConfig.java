@@ -18,7 +18,7 @@ public class NamespaceRefreshConfig {
     /**
      * Namespace 刷新配置属性。
      */
-    private final NamespaceRefreshProperties namespaceRefreshProperties;
+    private final ServiceInstanceProperties serviceInstanceProperties;
 
     /**
      * 注册 Redis 监听容器。
@@ -27,7 +27,7 @@ public class NamespaceRefreshConfig {
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory, NamespaceChangeSubscriber subscriber) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
-        container.addMessageListener(subscriber, new PatternTopic(namespaceRefreshProperties.getChannel()));
+        container.addMessageListener(subscriber, new PatternTopic(serviceInstanceProperties.getChannel()));
         return container;
     }
 }

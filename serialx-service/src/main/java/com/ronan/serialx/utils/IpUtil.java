@@ -41,7 +41,7 @@ public class IpUtil {
                 }
             }
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to get local IP", e);
+            throw new IllegalStateException("获取本机 IP 失败", e);
         }
 
         return "127.0.0.1";

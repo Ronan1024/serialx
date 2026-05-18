@@ -1,11 +1,11 @@
 package com.ronan.serialx.application.report;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ronan.serialx.common.util.Assert;
-import com.ronan.serialx.common.util.StringFormat;
-import com.ronan.serialx.config.NamespaceRefreshProperties;
-import com.ronan.serialx.domain.ServiceInstanceInfo;
+import com.ronan.serialx.config.ServiceInstanceProperties;
+import com.ronan.serialx.infra.entity.ServiceInstanceConfigStatusDO;
+import com.ronan.serialx.service.namespace.NamespaceRegistry;
+import com.ronan.serialx.service.namespace.NamespaceRuntime;
+import com.ronan.serialx.service.namespace.ServiceInstanceStatusWriterImpl;
 import com.ronan.serialx.utils.IpUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,21 +13,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.event.EventListener;
-import org.springframework.data.redis.connection.RedisStringCommands;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.types.Expiration;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.util.Date;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 /**
  * @program: serialx
@@ -40,46 +32,26 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ServiceInstanceReporter implements SmartLifecycle {
 
-    private final NamespaceRefreshProperties namespaceRefreshProperties;
-    private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
-    private volatile boolean running = true;
-    private final ThreadPoolTaskScheduler taskScheduler;
+    private final ServiceInstanceProperties serviceInstanceProperties;
+    private final ServiceInstanceStatusWriterImpl serviceInstanceStatusWriter;
+    private final NamespaceRegistry namespaceRegistry;
+    private volatile boolean running = false;
 
     @Value("${server.port}")
     private String port;
 
-
-    private static final String KEY = "serialx:service:instance-info:{}";
-
     /**
      * 定时上报实例状态。
      */
+    @Scheduled(fixedDelayString = "${serialx.service.instance.report-interval:20s}")
     public void scheduledReportStatus() {
-        String instanceKey = StringFormat.format(KEY, namespaceRefreshProperties.getInstanceId());
-        if (Boolean.FALSE.equals(stringRedisTemplate.hasKey(instanceKey))) {
+        if (!running || !StringUtils.hasText(serviceInstanceProperties.getInstanceId())) {
             return;
         }
-        String format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-        String value = stringRedisTemplate.opsForValue().get(instanceKey);
         try {
-            ServiceInstanceInfo serviceInstanceInfo = objectMapper.readValue(value, ServiceInstanceInfo.class);
-            serviceInstanceInfo.setLastReportTime(format);
-
-            stringRedisTemplate.execute((RedisCallback<Object>) connection -> {
-                try {
-                    connection.stringCommands()
-                            .set(instanceKey.getBytes(StandardCharsets.UTF_8), objectMapper.writeValueAsBytes(serviceInstanceInfo),
-                                    Expiration.keepTtl(), RedisStringCommands.SetOption.upsert());
-                } catch (JsonProcessingException e) {
-                    log.warn("deserialize service instance info failed, instanceId={}", namespaceRefreshProperties.getInstanceId(), e);
-                }
-                return null;
-            });
-            String instanceActiveKey = instanceKey + ":active";
-            stringRedisTemplate.opsForValue().set(instanceActiveKey, format, namespaceRefreshProperties.getReportInterval());
-        } catch (JsonProcessingException e) {
-            log.warn("deserialize service instance info failed, instanceId={}", namespaceRefreshProperties.getInstanceId(), e);
+            reportCurrentStatus();
+        } catch (UnknownHostException ex) {
+            log.warn("report service instance status failed, instanceId={}", serviceInstanceProperties.getInstanceId(), ex);
         }
     }
 
@@ -87,29 +59,10 @@ public class ServiceInstanceReporter implements SmartLifecycle {
      * 注册当前实例
      */
     @EventListener(ApplicationReadyEvent.class)
-    public void registeredInstance() throws UnknownHostException, JsonProcessingException {
-        Assert.isFalse(!StringUtils.hasText(namespaceRefreshProperties.getInstanceId()), () -> new RuntimeException("instance id already registered"));
-        String format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-        ServiceInstanceInfo instanceInfo = new ServiceInstanceInfo();
-        instanceInfo.setInstanceId(namespaceRefreshProperties.getInstanceId());
-        instanceInfo.setHostName(InetAddress.getLocalHost().getHostName());
-        instanceInfo.setCreateTime(format);
-        instanceInfo.setIp(IpUtil.getLocalIp());
-        instanceInfo.setPort(port);
-        instanceInfo.setRuntimeId(UUID.randomUUID().toString());
-        String instanceKey = StringFormat.format(KEY, namespaceRefreshProperties.getInstanceId());
-        String instanceActiveKey = instanceKey + ":active";
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(instanceKey)) &&
-                Boolean.TRUE.equals(stringRedisTemplate.hasKey(instanceActiveKey))) {
-            throw new RuntimeException("===>>>> instance already registered <<<<===");
-        }
-
-        stringRedisTemplate.opsForValue().set(instanceKey, objectMapper.writeValueAsString(instanceInfo), namespaceRefreshProperties.getStatusTtl());
-
-        taskScheduler.scheduleWithFixedDelay(
-                this::scheduledReportStatus,
-                Duration.ofMillis(namespaceRefreshProperties.getReportInterval().toMillis())
-        );
+    public void registeredInstance() throws UnknownHostException {
+        Assert.isFalse(!StringUtils.hasText(serviceInstanceProperties.getInstanceId()), () -> new RuntimeException("实例 ID 未配置"));
+        running = true;
+        reportCurrentStatus();
     }
 
     @Override
@@ -119,12 +72,6 @@ public class ServiceInstanceReporter implements SmartLifecycle {
 
     @Override
     public void stop() {
-        String instanceKey = StringFormat.format(KEY, namespaceRefreshProperties.getInstanceId());
-
-        stringRedisTemplate.delete(instanceKey);
-
-        String instanceActiveKey = instanceKey + ":active";
-        stringRedisTemplate.delete(instanceActiveKey);
         running = false;
     }
 
@@ -132,5 +79,24 @@ public class ServiceInstanceReporter implements SmartLifecycle {
     public boolean isRunning() {
         return running;
     }
-}
 
+    private void reportCurrentStatus() throws UnknownHostException {
+        serviceInstanceStatusWriter.saveOrUpdate(buildStatus(null));
+        for (NamespaceRuntime runtime : namespaceRegistry.listAll()) {
+            serviceInstanceStatusWriter.saveOrUpdate(buildStatus(runtime));
+        }
+    }
+
+    private ServiceInstanceConfigStatusDO buildStatus(NamespaceRuntime runtime) throws UnknownHostException {
+        ServiceInstanceConfigStatusDO status = new ServiceInstanceConfigStatusDO();
+        status.setInstanceId(serviceInstanceProperties.getInstanceId());
+        status.setHost(InetAddress.getLocalHost().getHostName() + "/" + IpUtil.getLocalIp() + ":" + port);
+        if (runtime != null) {
+            status.setNamespaceCode(runtime.getNamespaceCode());
+            status.setLoadedVersion(runtime.getVersion());
+        }
+        status.setRuntimeStatus("ACTIVE");
+        status.setLastReportTime(LocalDateTime.now());
+        return status;
+    }
+}

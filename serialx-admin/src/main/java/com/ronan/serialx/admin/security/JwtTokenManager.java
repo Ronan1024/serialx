@@ -45,7 +45,7 @@ public class JwtTokenManager {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new BizException(
                     SystemErrorCode.CONFIG_ERROR.getCode(),
-                    "serialx.admin.security.jwt-secret must be at least 32 bytes");
+                    "serialx.admin.security.jwt-secret 长度不能小于 32 字节");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }

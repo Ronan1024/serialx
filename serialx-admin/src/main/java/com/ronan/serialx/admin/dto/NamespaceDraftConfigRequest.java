@@ -16,7 +16,7 @@ public class NamespaceDraftConfigRequest {
     /**
      * 发号模式。
      */
-    @NotNull
+    @NotNull(message = "发号模式不能为空")
     private Integer idMode;
 
     /**

@@ -29,7 +29,7 @@ public class SnowflakeNamespaceConfigHandler implements NamespaceConfigHandler<S
             return new SnowflakeNamespaceConfig();
         }
         if (!config.isObject()) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace config must be json object");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "Namespace 配置必须是 JSON 对象");
         }
         if (config.isEmpty()) {
             return new SnowflakeNamespaceConfig();

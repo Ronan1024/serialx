@@ -29,10 +29,10 @@ public class NamespaceConfigHandlerRegistry {
      */
     public JsonNode normalize(Integer idMode, JsonNode config) {
         NamespaceIdModeEnum mode = NamespaceIdModeEnum.fromCode(idMode);
-        Assert.isNull(mode, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
+        Assert.notNull(mode, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
 
         NamespaceConfigHandler<? extends NamespaceModeConfig> handler = handlers.get(mode);
-        Assert.isNull(handler, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
+        Assert.notNull(handler, BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
 
         return handler.normalize(config);
     }

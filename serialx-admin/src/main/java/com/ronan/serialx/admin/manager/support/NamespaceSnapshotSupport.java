@@ -32,9 +32,10 @@ public class NamespaceSnapshotSupport {
      * 构建草稿配置实体。
      */
     public NamespaceConfigDO buildDraftConfig(Long namespaceId, Integer idMode, JsonNode config) {
+        String configJson = writeJson(config);
         return NamespaceConfigDO.builder()
                 .namespaceId(namespaceId).idMode(idMode)
-                .version(0).configChecksum(calculateChecksum(writeJson(config)))
+                .version(0).configJson(configJson).configChecksum(calculateChecksum(configJson))
                 .publishStatus(NamespacePublishStatusEnum.EDITING.getCode()).build();
     }
 
@@ -45,7 +46,7 @@ public class NamespaceSnapshotSupport {
         try {
             return objectMapper.writeValueAsString(new SnapshotView(namespace, config == null ? null : readJson(config.getConfigJson())));
         } catch (Exception ex) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "serialize namespace snapshot failed");
+            throw new BizException(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "Namespace 快照序列化失败");
         }
     }
 
@@ -67,7 +68,7 @@ public class NamespaceSnapshotSupport {
         try {
             return objectMapper.readTree(json);
         } catch (Exception ex) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace config deserialize failed");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "Namespace 配置反序列化失败");
         }
     }
 
@@ -89,7 +90,7 @@ public class NamespaceSnapshotSupport {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(digest.digest(content.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException ex) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "checksum algorithm unavailable");
+            throw new BizException(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "配置摘要算法不可用");
         }
     }
 

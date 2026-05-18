@@ -42,12 +42,14 @@ public class ServiceInstanceConfigStatusServiceImpl implements ServiceInstanceCo
 
     @Override
     public List<ServiceInstanceConfigStatusDO> listAll() {
-        return listByStatusKeyPattern("serialx:service:instance-status:*:*");
+        return listByStatusKeyPattern("serialx:service:instance-status:*");
     }
 
     @Override
     public List<ServiceInstanceConfigStatusDO> listByNamespaceCode(String namespaceCode) {
-        return listByStatusKeyPattern("serialx:service:instance-status:" + namespaceCode + ":*");
+        return listAll().stream()
+                .filter(status -> Objects.equals(namespaceCode, status.getNamespaceCode()))
+                .toList();
     }
 
     private List<ServiceInstanceConfigStatusDO> listByStatusKeyPattern(String keyPattern) {

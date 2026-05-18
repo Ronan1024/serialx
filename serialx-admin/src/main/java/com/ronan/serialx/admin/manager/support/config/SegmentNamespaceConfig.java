@@ -38,22 +38,22 @@ public class SegmentNamespaceConfig implements NamespaceModeConfig {
         requireNonNegative(initialValue, "initialValue");
         requirePositive(cacheSegments, "cacheSegments");
         if (maxValue != null && maxValue <= 0) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "maxValue must be greater than zero");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "maxValue 必须大于 0");
         }
         if (maxValue != null && initialValue != null && maxValue < initialValue) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "maxValue must be greater than or equal to initialValue");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "maxValue 必须大于等于 initialValue");
         }
     }
 
     private void requirePositive(Number value, String fieldName) {
         if (value == null || value.longValue() <= 0) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), fieldName + " must be greater than zero");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), fieldName + " 必须大于 0");
         }
     }
 
     private void requireNonNegative(Number value, String fieldName) {
         if (value == null || value.longValue() < 0) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), fieldName + " must be greater than or equal to zero");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), fieldName + " 必须大于等于 0");
         }
     }
 }

@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Getter
 @Setter
-@ConfigurationProperties(prefix = "serialx.service.namespace.refresh")
-public class NamespaceRefreshProperties {
+@ConfigurationProperties(prefix = "serialx.service.instance")
+public class ServiceInstanceProperties {
 
     /**
      * Redis 通知频道。

@@ -14,12 +14,12 @@ public enum SystemErrorCode implements ErrorCode {
     /**
      * 系统内部异常。
      */
-    INTERNAL_ERROR("S0001", "internal server error"),
+    INTERNAL_ERROR("S0001", "系统内部异常"),
 
     /**
      * 系统配置异常。
      */
-    CONFIG_ERROR("S0002", "configuration error");
+    CONFIG_ERROR("S0002", "系统配置异常");
 
     /**
      * 系统异常码。

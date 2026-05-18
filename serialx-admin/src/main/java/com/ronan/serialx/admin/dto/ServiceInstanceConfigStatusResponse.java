@@ -18,11 +18,6 @@ public class ServiceInstanceConfigStatusResponse {
     private String instanceId;
 
     /**
-     * 服务名称。
-     */
-    private String serviceName;
-
-    /**
      * 主机标识。
      */
     private String host;

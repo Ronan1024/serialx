@@ -17,32 +17,32 @@ public class AdminUserUpdateRequest {
     /**
      * 用户展示名称。
      */
-    @Size(max = 64)
+    @Size(max = 64, message = "展示名称长度不能超过 64")
     private String displayName;
 
     /**
      * 邮箱地址。
      */
-    @Email
-    @Size(max = 128)
+    @Email(message = "邮箱格式不正确")
+    @Size(max = 128, message = "邮箱长度不能超过 128")
     private String email;
 
     /**
      * 手机号码。
      */
-    @Size(max = 32)
+    @Size(max = 32, message = "手机号长度不能超过 32")
     private String mobile;
 
     /**
      * 用户状态。
      */
-    @Min(0)
-    @Max(1)
+    @Min(value = 0, message = "用户状态不能小于 0")
+    @Max(value = 1, message = "用户状态不能大于 1")
     private Integer status;
 
     /**
      * 用户角色。
      */
-    @Size(max = 128)
+    @Size(max = 128, message = "角色长度不能超过 128")
     private String roles;
 }

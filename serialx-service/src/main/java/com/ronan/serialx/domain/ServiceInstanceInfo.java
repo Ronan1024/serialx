@@ -3,6 +3,7 @@ package com.ronan.serialx.domain;
 import lombok.Data;
 
 /**
+ * 节点实例信息
  * @program: serialx
  * @description:
  * @author: L.J.Ran

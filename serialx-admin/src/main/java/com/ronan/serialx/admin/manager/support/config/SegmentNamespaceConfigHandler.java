@@ -24,7 +24,7 @@ public class SegmentNamespaceConfigHandler implements NamespaceConfigHandler<Seg
 
     @Override
     public SegmentNamespaceConfig parse(JsonNode config) {
-        JsonNode normalizedConfig = requireObject(config, "namespace config is required");
+        JsonNode normalizedConfig = requireObject(config, "Namespace 配置不能为空");
         return objectMapper.convertValue(normalizedConfig, SegmentNamespaceConfig.class);
     }
 
@@ -38,7 +38,7 @@ public class SegmentNamespaceConfigHandler implements NamespaceConfigHandler<Seg
             throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), emptyMessage);
         }
         if (!config.isObject()) {
-            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "namespace config must be json object");
+            throw new BizException(BusinessErrorCode.NAMESPACE_CONFIG_INVALID.getCode(), "Namespace 配置必须是 JSON 对象");
         }
         return config;
     }

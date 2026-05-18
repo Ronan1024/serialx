@@ -15,7 +15,7 @@ public class AdminUserPasswordRequest {
     /**
      * 新登录密码明文。
      */
-    @NotBlank
-    @Size(min = 8, max = 128)
+    @NotBlank(message = "密码不能为空")
+    @Size(min = 8, max = 128, message = "密码长度必须在 8 到 128 之间")
     private String password;
 }
