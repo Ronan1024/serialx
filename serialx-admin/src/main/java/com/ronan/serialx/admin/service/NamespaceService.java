@@ -46,7 +46,22 @@ public interface NamespaceService {
     void update(NamespaceDO namespace);
 
     /**
+     * 按当前版本和状态推进发布版本。
+     */
+    boolean updateVersionAndStatus(Long id, Integer expectedVersion, Integer expectedStatus, Integer nextVersion, Integer nextStatus);
+
+    /**
+     * 按当前版本和状态更新状态。
+     */
+    boolean updateStatus(Long id, Integer expectedVersion, Integer expectedStatus, Integer nextStatus);
+
+    /**
+     * 按当前版本和状态回滚版本。
+     */
+    boolean updateCurrentVersion(Long id, Integer expectedVersion, Integer expectedStatus, Integer nextVersion);
+
+    /**
      * 逻辑删除 Namespace。
      */
-    void markDeleted(Long id);
+    boolean markDeleted(Long id, Integer expectedVersion, Integer expectedStatus);
 }

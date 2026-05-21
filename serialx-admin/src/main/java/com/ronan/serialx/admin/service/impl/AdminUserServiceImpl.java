@@ -72,9 +72,6 @@ public class AdminUserServiceImpl implements AdminUserService {
      */
     @Override
     public AdminUserDO create(AdminUserDO user) {
-        LocalDateTime now = LocalDateTime.now();
-        user.setCreatedAt(now);
-        user.setUpdatedAt(now);
         adminUserMapper.insert(user);
         return user;
     }
@@ -84,7 +81,6 @@ public class AdminUserServiceImpl implements AdminUserService {
      */
     @Override
     public void update(AdminUserDO user) {
-        user.setUpdatedAt(LocalDateTime.now());
         adminUserMapper.updateById(user);
     }
 

@@ -1,21 +1,16 @@
 package com.ronan.serialx.infra.entity;
 
-import java.time.LocalDateTime;
-
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Getter;
-import lombok.Setter;
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * Namespace 持久化对象。
  */
-@Getter
-@Setter
+@Data
 @TableName("sx_namespace")
-public class NamespaceDO {
+@EqualsAndHashCode(callSuper = true)
+public class NamespaceDO extends BaseDO {
 
     /**
      * 主键 ID。
@@ -65,17 +60,7 @@ public class NamespaceDO {
     /**
      * 删除标记。
      */
+    @TableField(fill = FieldFill.INSERT)
     private Integer deleted;
 
-    /**
-     * 创建时间。
-     */
-    @TableField("created_at")
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间。
-     */
-    @TableField("updated_at")
-    private LocalDateTime updatedAt;
 }

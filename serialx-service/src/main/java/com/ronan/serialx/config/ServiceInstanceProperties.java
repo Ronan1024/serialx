@@ -1,8 +1,6 @@
 package com.ronan.serialx.config;
 
 import java.time.Duration;
-import java.util.UUID;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -43,7 +41,17 @@ public class ServiceInstanceProperties {
     private String instanceId;
 
     /**
-     * 是否启用 Namespace 动态刷新。
+     * 对外上报 IP。为空时自动探测本机 IPv4 地址。
+     */
+    private String advertisedIp;
+
+    /**
+     * 是否启用实例注册与状态上报。
      */
     private boolean enabled = true;
+
+    /**
+     * 是否启用 Namespace 动态刷新。
+     */
+    private boolean namespaceRefreshEnabled = true;
 }

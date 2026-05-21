@@ -2,12 +2,11 @@ package com.ronan.serialx.admin.security;
 
 import java.io.IOException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ronan.serialx.admin.service.AdminUserService;
+import com.ronan.serialx.admin.support.AdminApiResponseWriter;
 import com.ronan.serialx.common.enums.AdminUserStatusEnum;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.UnauthorizedException;
-import com.ronan.serialx.common.response.ApiResponse;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -49,10 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      */
     private final AdminUserService adminUserService;
 
-    /**
-     * JSON 序列化组件。
-     */
-    private final ObjectMapper objectMapper;
+    private final AdminApiResponseWriter responseWriter;
 
     /**
      * 从请求头解析 JWT 并写入 Spring Security 上下文。
@@ -82,9 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
             log.warn("admin jwt authentication failed, uri={}, code={}, message={}",
                     request.getRequestURI(), ex.getCode(), ex.getMessage());
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(), ApiResponse.fail(ex.getCode(), ex.getMessage()));
+            responseWriter.writeFailure(response, HttpServletResponse.SC_UNAUTHORIZED, ex.getCode(), ex.getMessage());
         }
     }
 }

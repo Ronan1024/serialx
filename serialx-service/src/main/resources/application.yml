@@ -25,8 +25,9 @@ mybatis-plus:
 serialx:
   service:
     auth:
-      enabled: ${SERIALX_APP_AUTH_ENABLED:true}
-      signature-expire-window: ${SERIALX_APP_SIGNATURE_EXPIRE_WINDOW:5m}
+      signature:
+        enabled: ${SERIALX_APP_AUTH_ENABLED:true}
+        signature-expire-window: ${SERIALX_APP_SIGNATURE_EXPIRE_WINDOW:5m}
     snowflake:
       worker-id: ${SERIALX_SNOWFLAKE_WORKER_ID:0}
       datacenter-id: ${SERIALX_SNOWFLAKE_DATACENTER_ID:0}
@@ -38,5 +39,7 @@ serialx:
       full-sync-interval: ${SERIALX_NAMESPACE_FULL_SYNC_INTERVAL:30s}
       report-interval: ${SERIALX_NAMESPACE_REPORT_INTERVAL:20s}
       status-ttl: ${SERIALX_NAMESPACE_STATUS_TTL:24h}
-      instance-id: ${SERIALX_SERVICE_INSTANCE_ID}
-      enabled: ${SERIALX_NAMESPACE_REFRESH_ENABLED:true}
+      instance-id: ${SERIALX_SERVICE_INSTANCE_ID:}
+      advertised-ip: ${SERIALX_SERVICE_INSTANCE_IP:}
+      enabled: ${SERIALX_SERVICE_INSTANCE_ENABLED:true}
+      namespace-refresh-enabled: ${SERIALX_NAMESPACE_REFRESH_ENABLED:true}

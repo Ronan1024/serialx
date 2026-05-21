@@ -1,6 +1,5 @@
 package com.ronan.serialx.admin.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -63,16 +62,12 @@ public class NamespaceConfigServiceImpl implements NamespaceConfigService {
 
     @Override
     public NamespaceConfigDO create(NamespaceConfigDO namespaceConfig) {
-        LocalDateTime now = LocalDateTime.now();
-        namespaceConfig.setCreatedAt(now);
-        namespaceConfig.setUpdatedAt(now);
         namespaceConfigMapper.insert(namespaceConfig);
         return namespaceConfig;
     }
 
     @Override
     public void update(NamespaceConfigDO namespaceConfig) {
-        namespaceConfig.setUpdatedAt(LocalDateTime.now());
         namespaceConfigMapper.updateById(namespaceConfig);
     }
 }

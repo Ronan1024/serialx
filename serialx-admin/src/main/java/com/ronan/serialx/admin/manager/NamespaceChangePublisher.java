@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ronan.serialx.common.model.NamespaceChangeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,11 @@ public class NamespaceChangePublisher {
     private final StringRedisTemplate stringRedisTemplate;
 
     /**
+     * Spring 本地事件发布器。
+     */
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    /**
      * JSON 序列化组件。
      */
     private final ObjectMapper objectMapper;
@@ -30,6 +36,19 @@ public class NamespaceChangePublisher {
      * 发布 Namespace 变更通知。
      */
     public void publish(NamespaceChangeMessage message) {
+        publishLocalEvent(message);
+        publishRedisMessage(message);
+    }
+
+    private void publishLocalEvent(NamespaceChangeMessage message) {
+        try {
+            applicationEventPublisher.publishEvent(message);
+        } catch (Exception ex) {
+            log.warn("namespace local change event publish failed, namespaceCode={}", message.getNamespaceCode(), ex);
+        }
+    }
+
+    private void publishRedisMessage(NamespaceChangeMessage message) {
         try {
             stringRedisTemplate.convertAndSend(
                     NamespaceChangeMessage.DEFAULT_CHANNEL, objectMapper.writeValueAsString(message));

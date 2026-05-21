@@ -35,8 +35,11 @@ import com.ronan.serialx.infra.entity.NamespaceConfigDO;
 import com.ronan.serialx.infra.entity.NamespaceDO;
 import com.ronan.serialx.infra.entity.ServiceInstanceConfigStatusDO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
@@ -126,7 +129,11 @@ public class NamespaceManager {
 
         request.setRemark(StringUtils.hasText(request.getRemark()) ? request.getRemark().trim() : null);
         NamespaceDO namespace = NamespaceConvert.INSTANCE.toNamespaceDO(request);
-        namespaceService.create(namespace);
+        try {
+            namespaceService.create(namespace);
+        } catch (DuplicateKeyException ex) {
+            throw new BizException(BusinessErrorCode.NAMESPACE_CODE_EXISTS);
+        }
 
         NamespaceConfigDO draftConfig = namespaceSnapshotSupport.buildDraftConfig(namespace.getId(), request.getIdMode(), normalizedConfig);
         namespaceConfigService.create(draftConfig);
@@ -206,19 +213,31 @@ public class NamespaceManager {
 
         NamespaceConfigDO publishedConfig = NamespaceConvert.INSTANCE.toNamespaceConfigDO(id, nextVersion, editingConfig);
         publishedConfig.setPublishedBy(AdminSecurityContextUtils.currentUsername());
-        namespaceConfigService.create(publishedConfig);
-
-        if (NamespaceStatusEnum.DRAFT.getCode().equals(namespace.getStatus())) {
-            namespace.setStatus(NamespaceStatusEnum.ENABLED.getCode());
+        try {
+            namespaceConfigService.create(publishedConfig);
+        } catch (DuplicateKeyException ex) {
+            throw new BizException(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "namespace publish conflict");
         }
-        namespace.setCurrentVersion(nextVersion);
 
-        String snapshot = namespaceSnapshotSupport.snapshot(namespace, publishedConfig);
-        namespaceService.update(namespace);
+        Integer nextStatus = NamespaceStatusEnum.DRAFT.getCode().equals(namespace.getStatus())
+                ? NamespaceStatusEnum.ENABLED.getCode()
+                : namespace.getStatus();
+
+        NamespaceDO publishedNamespace = copyNamespaceForSnapshot(namespace);
+        publishedNamespace.setStatus(nextStatus);
+        publishedNamespace.setCurrentVersion(nextVersion);
+        String snapshot = namespaceSnapshotSupport.snapshot(publishedNamespace, publishedConfig);
+        boolean updated = namespaceService.updateVersionAndStatus(
+                id,
+                namespace.getCurrentVersion(),
+                namespace.getStatus(),
+                nextVersion,
+                nextStatus);
+        assertUpdated(updated, BusinessErrorCode.NAMESPACE_PUBLISH_FAILED);
 
         createChangeLog(id, nextVersion, NamespaceChangeActionEnum.PUBLISH, before, snapshot);
 
-        notifyChange(namespace.getNamespaceCode(), nextVersion, NamespaceChangeActionEnum.PUBLISH);
+        notifyChangeAfterCommit(namespace.getNamespaceCode(), nextVersion, NamespaceChangeActionEnum.PUBLISH);
         return toResponse(requireNamespace(id));
     }
 
@@ -233,12 +252,19 @@ public class NamespaceManager {
                 BizException.supplier(BusinessErrorCode.NAMESPACE_STATUS_INVALID.getCode(), "namespace has no published version"));
         String before =
                 namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
-        namespace.setStatus(NamespaceStatusEnum.ENABLED.getCode());
-        namespaceService.update(namespace);
+        if (NamespaceStatusEnum.ENABLED.getCode().equals(namespace.getStatus())) {
+            return toResponse(namespace);
+        }
+        boolean updated = namespaceService.updateStatus(
+                id,
+                namespace.getCurrentVersion(),
+                namespace.getStatus(),
+                NamespaceStatusEnum.ENABLED.getCode());
+        assertUpdated(updated, BusinessErrorCode.NAMESPACE_STATUS_INVALID);
         createChangeLog(id, namespace.getCurrentVersion(), NamespaceChangeActionEnum.ENABLE, before,
                 namespaceSnapshotSupport.snapshot(
                         requireNamespace(id), namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion())));
-        notifyChange(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.ENABLE);
+        notifyChangeAfterCommit(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.ENABLE);
         return toResponse(requireNamespace(id));
     }
 
@@ -249,12 +275,19 @@ public class NamespaceManager {
     public NamespaceResponse disableNamespace(Long id) {
         NamespaceDO namespace = requireNamespace(id);
         String before = namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
-        namespace.setStatus(NamespaceStatusEnum.DISABLED.getCode());
-        namespaceService.update(namespace);
+        if (NamespaceStatusEnum.DISABLED.getCode().equals(namespace.getStatus())) {
+            return toResponse(namespace);
+        }
+        boolean updated = namespaceService.updateStatus(
+                id,
+                namespace.getCurrentVersion(),
+                namespace.getStatus(),
+                NamespaceStatusEnum.DISABLED.getCode());
+        assertUpdated(updated, BusinessErrorCode.NAMESPACE_STATUS_INVALID);
         createChangeLog(id, namespace.getCurrentVersion(), NamespaceChangeActionEnum.DISABLE, before,
                 namespaceSnapshotSupport.snapshot(
                         requireNamespace(id), namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion())));
-        notifyChange(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.DISABLE);
+        notifyChangeAfterCommit(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.DISABLE);
         return toResponse(requireNamespace(id));
     }
 
@@ -266,13 +299,18 @@ public class NamespaceManager {
         NamespaceDO namespace = requireNamespace(id);
         NamespaceConfigDO targetConfig = namespaceConfigService.getPublishedConfig(id, version);
         Assert.notNull(targetConfig, BizException.supplier(BusinessErrorCode.NAMESPACE_VERSION_NOT_FOUND));
+        if (version.equals(namespace.getCurrentVersion())) {
+            return toResponse(namespace);
+        }
         String before =
                 namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
-        namespace.setCurrentVersion(version);
-        namespaceService.update(namespace);
+        NamespaceDO rollbackNamespace = copyNamespaceForSnapshot(namespace);
+        rollbackNamespace.setCurrentVersion(version);
+        boolean updated = namespaceService.updateCurrentVersion(id, namespace.getCurrentVersion(), namespace.getStatus(), version);
+        assertUpdated(updated, BusinessErrorCode.NAMESPACE_ROLLBACK_FAILED);
         createChangeLog(id, version, NamespaceChangeActionEnum.ROLLBACK, before,
-                namespaceSnapshotSupport.snapshot(namespace, targetConfig));
-        notifyChange(namespace.getNamespaceCode(), version, NamespaceChangeActionEnum.ROLLBACK);
+                namespaceSnapshotSupport.snapshot(rollbackNamespace, targetConfig));
+        notifyChangeAfterCommit(namespace.getNamespaceCode(), version, NamespaceChangeActionEnum.ROLLBACK);
         return toResponse(requireNamespace(id));
     }
 
@@ -284,9 +322,10 @@ public class NamespaceManager {
         NamespaceDO namespace = requireNamespace(id);
         Assert.isFalse(NamespaceStatusEnum.ENABLED.getCode().equals(namespace.getStatus()), BusinessErrorCode.NAMESPACE_DELETE_FORBIDDEN);
         String before = namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getEditingConfig(id));
-        namespaceService.markDeleted(id);
+        boolean updated = namespaceService.markDeleted(id, namespace.getCurrentVersion(), namespace.getStatus());
+        assertUpdated(updated, BusinessErrorCode.NAMESPACE_STATUS_INVALID);
         createChangeLog(id, namespace.getCurrentVersion(), NamespaceChangeActionEnum.DELETE, before, null);
-        notifyChange(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.DELETE);
+        notifyChangeAfterCommit(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.DELETE);
     }
 
     /**
@@ -393,13 +432,43 @@ public class NamespaceManager {
      * @param version       版本号
      * @param action        变更动作
      */
-    private void notifyChange(String namespaceCode, Integer version, NamespaceChangeActionEnum action) {
-        namespaceChangePublisher.publish(NamespaceChangeMessage.builder()
+    private void notifyChangeAfterCommit(String namespaceCode, Integer version, NamespaceChangeActionEnum action) {
+        Runnable publishTask = () -> namespaceChangePublisher.publish(NamespaceChangeMessage.builder()
                 .namespaceCode(namespaceCode)
                 .version(version)
                 .eventType(action.getName())
                 .publishTime(java.time.LocalDateTime.now())
                 .build());
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            publishTask.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publishTask.run();
+            }
+        });
+    }
+
+    private void assertUpdated(boolean updated, BusinessErrorCode errorCode) {
+        Assert.isTrue(updated, BizException.supplier(errorCode.getCode(), "namespace has been changed by another request"));
+    }
+
+    private NamespaceDO copyNamespaceForSnapshot(NamespaceDO namespace) {
+        NamespaceDO copied = new NamespaceDO();
+        copied.setId(namespace.getId());
+        copied.setNamespaceCode(namespace.getNamespaceCode());
+        copied.setNamespaceName(namespace.getNamespaceName());
+        copied.setIdMode(namespace.getIdMode());
+        copied.setStatus(namespace.getStatus());
+        copied.setOwner(namespace.getOwner());
+        copied.setRemark(namespace.getRemark());
+        copied.setCurrentVersion(namespace.getCurrentVersion());
+        copied.setDeleted(namespace.getDeleted());
+        copied.setCreatedAt(namespace.getCreatedAt());
+        copied.setUpdatedAt(namespace.getUpdatedAt());
+        return copied;
     }
 
 }

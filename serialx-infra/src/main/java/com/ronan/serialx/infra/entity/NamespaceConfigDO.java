@@ -6,7 +6,10 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -14,8 +17,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("sx_namespace_config")
-public class NamespaceConfigDO {
+public class NamespaceConfigDO extends BaseDO {
 
     /**
      * 主键 ID。
@@ -70,15 +76,4 @@ public class NamespaceConfigDO {
     @TableField("published_at")
     private LocalDateTime publishedAt;
 
-    /**
-     * 创建时间。
-     */
-    @TableField("created_at")
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间。
-     */
-    @TableField("updated_at")
-    private LocalDateTime updatedAt;
 }

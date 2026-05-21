@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @TableName("sx_service_instance_config_status")
-public class ServiceInstanceConfigStatusDO {
+public class ServiceInstanceConfigStatusDO extends BaseDO {
 
     /**
      * 主键 ID。
@@ -28,12 +28,6 @@ public class ServiceInstanceConfigStatusDO {
      */
     @TableField("instance_id")
     private String instanceId;
-
-    /**
-     * 服务名称。
-     */
-    @TableField("service_name")
-    private String serviceName;
 
     /**
      * 主机标识。
@@ -65,14 +59,9 @@ public class ServiceInstanceConfigStatusDO {
     private LocalDateTime lastReportTime;
 
     /**
-     * 创建时间。
+     * 最近判定离线时间，仅用于运行态展示，不写入数据库。
      */
-    @TableField("created_at")
-    private LocalDateTime createdAt;
+    @TableField(exist = false)
+    private LocalDateTime lastOfflineTime;
 
-    /**
-     * 更新时间。
-     */
-    @TableField("updated_at")
-    private LocalDateTime updatedAt;
 }

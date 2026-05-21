@@ -1,6 +1,7 @@
 package com.ronan.serialx.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ronan.serialx.admin.service.NamespaceService;
 import com.ronan.serialx.infra.entity.NamespaceDO;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -83,10 +85,52 @@ public class NamespaceServiceImpl implements NamespaceService {
     }
 
     @Override
-    public void markDeleted(Long id) {
-        NamespaceDO namespace = new NamespaceDO();
-        namespace.setId(id);
-        namespace.setDeleted(1);
-        namespaceMapper.updateById(namespace);
+    public boolean updateVersionAndStatus(
+            Long id,
+            Integer expectedVersion,
+            Integer expectedStatus,
+            Integer nextVersion,
+            Integer nextStatus) {
+        return namespaceMapper.update(new LambdaUpdateWrapper<NamespaceDO>()
+                .set(NamespaceDO::getCurrentVersion, nextVersion)
+                .set(NamespaceDO::getStatus, nextStatus)
+                .set(NamespaceDO::getUpdatedAt, LocalDateTime.now())
+                .eq(NamespaceDO::getId, id)
+                .eq(NamespaceDO::getDeleted, 0)
+                .eq(NamespaceDO::getCurrentVersion, expectedVersion)
+                .eq(NamespaceDO::getStatus, expectedStatus)) > 0;
+    }
+
+    @Override
+    public boolean updateStatus(Long id, Integer expectedVersion, Integer expectedStatus, Integer nextStatus) {
+        return namespaceMapper.update(new LambdaUpdateWrapper<NamespaceDO>()
+                .set(NamespaceDO::getStatus, nextStatus)
+                .set(NamespaceDO::getUpdatedAt, LocalDateTime.now())
+                .eq(NamespaceDO::getId, id)
+                .eq(NamespaceDO::getDeleted, 0)
+                .eq(NamespaceDO::getCurrentVersion, expectedVersion)
+                .eq(NamespaceDO::getStatus, expectedStatus)) > 0;
+    }
+
+    @Override
+    public boolean updateCurrentVersion(Long id, Integer expectedVersion, Integer expectedStatus, Integer nextVersion) {
+        return namespaceMapper.update(new LambdaUpdateWrapper<NamespaceDO>()
+                .set(NamespaceDO::getCurrentVersion, nextVersion)
+                .set(NamespaceDO::getUpdatedAt, LocalDateTime.now())
+                .eq(NamespaceDO::getId, id)
+                .eq(NamespaceDO::getDeleted, 0)
+                .eq(NamespaceDO::getCurrentVersion, expectedVersion)
+                .eq(NamespaceDO::getStatus, expectedStatus)) > 0;
+    }
+
+    @Override
+    public boolean markDeleted(Long id, Integer expectedVersion, Integer expectedStatus) {
+        return namespaceMapper.update(new LambdaUpdateWrapper<NamespaceDO>()
+                .set(NamespaceDO::getDeleted, 1)
+                .set(NamespaceDO::getUpdatedAt, LocalDateTime.now())
+                .eq(NamespaceDO::getId, id)
+                .eq(NamespaceDO::getDeleted, 0)
+                .eq(NamespaceDO::getCurrentVersion, expectedVersion)
+                .eq(NamespaceDO::getStatus, expectedStatus)) > 0;
     }
 }
