@@ -37,8 +37,8 @@ public class AppManager {
      */
     public PageResult<AppResponse> pageApps(long pageNo, long pageSize, String keyword, Integer status) {
         validateStatus(status);
-        long normalizedPageNo = Math.max(pageNo, 1);
-        long normalizedPageSize = Math.min(Math.max(pageSize, 1), 100);
+        long normalizedPageNo = Math.clamp(pageNo, 1, Long.MAX_VALUE);
+        long normalizedPageSize = Math.clamp(pageSize, 1, 100);
         Page<AppDO> page = appService.pageApps(normalizedPageNo, normalizedPageSize, keyword, status);
         List<AppResponse> records = page.getRecords().stream()
                 .map(this::toResponse)
