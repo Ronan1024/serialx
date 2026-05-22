@@ -17,7 +17,7 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          component: () => import('../views/DashboardView.vue'),
+          component: () => import('../views/HomeView.vue'),
           meta: { title: '概览' }
         },
         {
@@ -49,18 +49,6 @@ const router = createRouter({
           name: 'alarms',
           component: () => import('../views/AlarmsView.vue'),
           meta: { title: '告警中心' }
-        },
-        {
-          path: 'approvals',
-          name: 'approvals',
-          component: () => import('../views/ApprovalView.vue'),
-          meta: { title: '审批中心' }
-        },
-        {
-          path: 'audit',
-          name: 'audit',
-          component: () => import('../views/AuditLogView.vue'),
-          meta: { title: '审计日志' }
         },
         {
           path: 'users',

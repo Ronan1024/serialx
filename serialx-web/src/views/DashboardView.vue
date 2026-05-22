@@ -53,7 +53,7 @@
 
           <div class="split-col">
             <div class="bento-card">
-              <div class="card-header mb-16"><span class="fw-700 text-lg">待办任务</span></div>
+              <div class="card-header mb-16"><span class="fw-700 text-lg">快捷入口</span></div>
               <div class="todo-list">
                 <div class="todo-item" v-for="todo in todos" :key="todo.id" @click="router.push(todo.link)">
                   <div class="todo-icon-outline" :class="todo.type">
@@ -102,8 +102,7 @@
 
           <div class="bento-card logs-card">
             <div class="card-header mb-16">
-              <span class="fw-700 text-lg">最新审计</span>
-              <el-button link type="primary" @click="router.push('/audit')">查看全部</el-button>
+              <span class="fw-700 text-lg">最近动态</span>
             </div>
             <div class="recent-logs">
               <div class="recent-log-item" v-for="log in recentLogs" :key="log.id">
@@ -130,7 +129,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Refresh, DataLine, Monitor, Connection, Timer,
-  CaretTop, CaretBottom, DocumentChecked, Bell, Warning, ArrowRight
+  CaretTop, CaretBottom, Grid, Warning, ArrowRight
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -147,9 +146,9 @@ const dashboardStats = [
 const chartBars = ref(Array.from({ length: 12 }, () => Math.floor(Math.random() * 70) + 10))
 
 const todos = [
-  { id: 1, title: '待审批发布申请', time: '10分钟前', icon: DocumentChecked, type: 'primary', link: '/approvals' },
-  { id: 2, title: 'Snowflake 租约将过期', time: '1小时前', icon: Warning, type: 'danger', link: '/nodes' },
-  { id: 3, title: '新应用接入待审核', time: '3小时前', icon: Bell, type: 'warning', link: '/approvals' },
+  { id: 1, title: '维护 Namespace 配置', time: '进入发号规则管理', icon: Grid, type: 'primary', link: '/namespaces' },
+  { id: 2, title: '检查节点同步状态', time: '查看实例心跳与版本', icon: Warning, type: 'danger', link: '/nodes' },
+  { id: 3, title: '管理业务应用接入', time: '配置 AppKey 与密钥', icon: Connection, type: 'warning', link: '/apps' },
 ]
 
 const health = [
@@ -167,9 +166,9 @@ const geo = [
 
 const recentLogs = [
   { id: 1, user: 'admin', action: '发布了', target: 'order_id', time: '5分钟前' },
-  { id: 2, user: 'ronan', action: '回滚了', target: 'user_sn', time: '18分钟前' },
+  { id: 2, user: 'ronan', action: '启用了', target: 'user_sn', time: '18分钟前' },
   { id: 3, user: 'jiang', action: '注册了应用', target: 'payment_gw', time: '45分钟前' },
-  { id: 4, user: 'system', action: '回收了', target: 'worker_3', time: '1小时前' },
+  { id: 4, user: 'system', action: '同步了节点', target: 'worker_3', time: '1小时前' },
 ]
 
 const refreshDashboard = () => {

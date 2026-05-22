@@ -35,7 +35,6 @@
           >
             <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
             <span class="nav-label">{{ item.label }}</span>
-            <span v-if="item.badge" class="nav-badge" :class="item.badgeType">{{ item.badge }}</span>
           </router-link>
         </div>
       </nav>
@@ -76,21 +75,6 @@
           </el-breadcrumb>
         </div>
         <div class="topbar-right">
-          <div class="topbar-actions">
-            <el-tooltip content="搜索资源" placement="bottom">
-              <el-button :icon="Search" circle text />
-            </el-tooltip>
-            <el-tooltip content="系统通知" placement="bottom">
-              <div class="notification-wrap">
-                <el-button :icon="Bell" circle text />
-                <span class="dot-badge"></span>
-              </div>
-            </el-tooltip>
-            <el-tooltip content="帮助文档" placement="bottom">
-              <el-button :icon="QuestionFilled" circle text />
-            </el-tooltip>
-          </div>
-          <el-divider direction="vertical" />
           <div class="system-status">
             <span class="status-dot online"></span>
             <span class="status-text">集群运行中</span>
@@ -117,8 +101,8 @@ import { computed, watchEffect, ref } from 'vue'
 import { useRouter, useRoute, type RouteLocationMatched } from 'vue-router'
 import {
   DataAnalysis, Grid, Connection, Monitor, PieChart, 
-  Bell, DocumentChecked, List, Setting, 
-  Search, QuestionFilled, CaretTop, User, SwitchButton
+  Bell, Setting, UserFilled,
+  CaretTop, User, SwitchButton
 } from '@element-plus/icons-vue'
 import { clearAuthState, getCurrentUser } from '@/utils/auth'
 
@@ -141,26 +125,25 @@ watchEffect(() => {
 
 const menuGroups = [
   {
-    title: '核心功能',
+    title: '业务治理',
     items: [
       { path: '/',           label: '概览仪表盘',   icon: DataAnalysis },
       { path: '/namespaces', label: 'Namespace 管理', icon: Grid },
       { path: '/apps',       label: '应用接入',     icon: Connection },
+      { path: '/nodes',      label: '节点管理',     icon: Monitor },
     ]
   },
   {
-    title: '运维治理',
+    title: '观测运维',
     items: [
-      { path: '/nodes',      label: '节点管理',     icon: Monitor, badge: '3', badgeType: 'success' },
       { path: '/stats',      label: '调用统计',     icon: PieChart },
-      { path: '/alarms',     label: '告警中心',     icon: Bell, badge: '!', badgeType: 'danger' },
+      { path: '/alarms',     label: '告警中心',     icon: Bell },
     ]
   },
   {
-    title: '管控中心',
+    title: '系统管理',
     items: [
-      { path: '/approvals',  label: '审批中心',     icon: DocumentChecked, badge: '2', badgeType: 'warning' },
-      { path: '/audit',      label: '审计日志',     icon: List },
+      { path: '/users',      label: '用户管理',     icon: UserFilled },
       { path: '/settings',   label: '系统设置',     icon: Setting },
     ]
   }
@@ -273,18 +256,6 @@ const handleLogout = () => {
   color: var(--accent);
 }
 
-.nav-badge {
-  margin-left: auto;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-weight: 700;
-}
-.nav-badge.success { background: var(--green); }
-.nav-badge.danger { background: var(--red); }
-
 /* User Footer */
 .sidebar-footer {
   padding: 16px 12px;
@@ -365,27 +336,6 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   gap: 20px;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.notification-wrap {
-  position: relative;
-}
-
-.dot-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  background: var(--red);
-  border: 2px solid #fff;
-  border-radius: 50%;
 }
 
 .system-status {
