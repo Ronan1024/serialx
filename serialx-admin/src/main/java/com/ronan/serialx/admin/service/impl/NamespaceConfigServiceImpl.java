@@ -1,5 +1,7 @@
 package com.ronan.serialx.admin.service.impl;
 
+import static com.ronan.serialx.infra.support.MybatisQueryUtils.selectFirst;
+
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -24,19 +26,18 @@ public class NamespaceConfigServiceImpl implements NamespaceConfigService {
 
     @Override
     public NamespaceConfigDO getEditingConfig(Long namespaceId) {
-        return namespaceConfigMapper.selectOne(new LambdaQueryWrapper<NamespaceConfigDO>()
+        return selectFirst(namespaceConfigMapper, new LambdaQueryWrapper<NamespaceConfigDO>()
                 .eq(NamespaceConfigDO::getNamespaceId, namespaceId)
                 .eq(NamespaceConfigDO::getPublishStatus, NamespacePublishStatusEnum.EDITING.getCode())
-                .orderByDesc(NamespaceConfigDO::getId)
-                .last("limit 1"));
+                .orderByDesc(NamespaceConfigDO::getId));
     }
 
     @Override
     public NamespaceConfigDO getByNamespaceIdAndVersion(Long namespaceId, Integer version) {
-        return namespaceConfigMapper.selectOne(new LambdaQueryWrapper<NamespaceConfigDO>()
+        return selectFirst(namespaceConfigMapper, new LambdaQueryWrapper<NamespaceConfigDO>()
                 .eq(NamespaceConfigDO::getNamespaceId, namespaceId)
                 .eq(NamespaceConfigDO::getVersion, version)
-                .last("limit 1"));
+                .orderByDesc(NamespaceConfigDO::getId));
     }
 
     @Override
@@ -45,11 +46,11 @@ public class NamespaceConfigServiceImpl implements NamespaceConfigService {
             return null;
         }
 
-        return namespaceConfigMapper.selectOne(new LambdaQueryWrapper<NamespaceConfigDO>()
+        return selectFirst(namespaceConfigMapper, new LambdaQueryWrapper<NamespaceConfigDO>()
                 .eq(NamespaceConfigDO::getNamespaceId, namespaceId)
                 .eq(NamespaceConfigDO::getVersion, version)
                 .eq(NamespaceConfigDO::getPublishStatus, NamespacePublishStatusEnum.PUBLISHED.getCode())
-                .last("limit 1"));
+                .orderByDesc(NamespaceConfigDO::getId));
     }
 
     @Override

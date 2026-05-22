@@ -1,5 +1,7 @@
 package com.ronan.serialx.application.refresh;
 
+import static com.ronan.serialx.infra.support.MybatisQueryUtils.selectFirst;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -94,10 +96,10 @@ public class NamespaceRuntimeLoader {
         if (!StringUtils.hasText(namespaceCode)) {
             return;
         }
-        NamespaceDO namespace = namespaceMapper.selectOne(new LambdaQueryWrapper<NamespaceDO>()
+        NamespaceDO namespace = selectFirst(namespaceMapper, new LambdaQueryWrapper<NamespaceDO>()
                 .eq(NamespaceDO::getNamespaceCode, namespaceCode)
                 .eq(NamespaceDO::getDeleted, NOT_DELETED)
-                .last("limit 1"));
+                .orderByDesc(NamespaceDO::getId));
         if (namespace == null || !Objects.equals(NamespaceStatusEnum.ENABLED.getCode(), namespace.getStatus())) {
             remove(namespaceCode, ServiceInstanceRedisConstants.DISABLED);
             return;
@@ -108,11 +110,11 @@ public class NamespaceRuntimeLoader {
 
     private void refresh(NamespaceDO namespace, Integer targetVersion) {
         String namespaceCode = namespace.getNamespaceCode();
-        NamespaceConfigDO config = namespaceConfigMapper.selectOne(new LambdaQueryWrapper<NamespaceConfigDO>()
+        NamespaceConfigDO config = selectFirst(namespaceConfigMapper, new LambdaQueryWrapper<NamespaceConfigDO>()
                 .eq(NamespaceConfigDO::getNamespaceId, namespace.getId())
                 .eq(NamespaceConfigDO::getVersion, targetVersion)
                 .eq(NamespaceConfigDO::getPublishStatus, NamespacePublishStatusEnum.PUBLISHED.getCode())
-                .last("limit 1"));
+                .orderByDesc(NamespaceConfigDO::getId));
         if (config == null) {
             reportNamespaceStatus(namespaceCode, targetVersion, ServiceInstanceRedisConstants.LOAD_FAILED);
             log.warn("published namespace config not found, namespaceCode={}, version={}", namespaceCode, targetVersion);

@@ -1,5 +1,7 @@
 package com.ronan.serialx.adapter.mysql;
 
+import static com.ronan.serialx.infra.support.MybatisQueryUtils.selectFirst;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ronan.serialx.application.auth.AppCredential;
 import com.ronan.serialx.application.auth.AppCredentialService;
@@ -28,16 +30,16 @@ public class DatabaseAppCredentialService implements AppCredentialService {
         if (!StringUtils.hasText(appKey)) {
             return null;
         }
-        AppDO app = appMapper.selectOne(new LambdaQueryWrapper<AppDO>()
+        AppDO app = selectFirst(appMapper, new LambdaQueryWrapper<AppDO>()
                 .eq(AppDO::getAppKey, appKey)
-                .last("limit 1"));
+                .orderByDesc(AppDO::getId));
         if (app == null) {
             return null;
         }
-        AppSecretDO secret = appSecretMapper.selectOne(new LambdaQueryWrapper<AppSecretDO>()
+        AppSecretDO secret = selectFirst(appSecretMapper, new LambdaQueryWrapper<AppSecretDO>()
                 .eq(AppSecretDO::getAppId, app.getId())
                 .eq(AppSecretDO::getStatus, AppStatusEnum.ENABLED.getCode())
-                .last("limit 1"));
+                .orderByDesc(AppSecretDO::getId));
         return AppCredential.builder()
                 .appKey(app.getAppKey())
                 .appStatus(app.getStatus())
