@@ -116,7 +116,7 @@
                 <el-button link type="primary" class="more-btn">更多</el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="openRollbackDialog(row)" :icon="RefreshLeft">版本回滚</el-dropdown-item>
+                    <el-dropdown-item v-if="row.idMode !== 2" @click="openRollbackDialog(row)" :icon="RefreshLeft">版本回滚</el-dropdown-item>
                     <el-dropdown-item @click="openLogsDrawer(row)" :icon="List">操作日志</el-dropdown-item>
                     <el-dropdown-item @click="openInstancesDrawer(row)" :icon="Monitor">实例同步</el-dropdown-item>
                     <el-dropdown-item divided @click="handleDelete(row.id)" :icon="Delete" style="color: var(--red)">删除资源</el-dropdown-item>
@@ -143,6 +143,21 @@
     <!-- Test ID Dialog -->
     <el-dialog v-model="testVisible" :title="`发号测试: ${testNs?.namespaceCode}`" width="480px">
       <div class="test-container">
+        <el-select
+          v-model="selectedTestInstanceId"
+          placeholder="选择测试节点"
+          :loading="testNodeLoading"
+          clearable
+          style="width: 100%"
+        >
+          <el-option label="当前管理节点" value="" />
+          <el-option
+            v-for="instance in activeTestInstances"
+            :key="instance.instanceId"
+            :label="`${instance.instanceId} · ${instance.host}`"
+            :value="instance.instanceId"
+          />
+        </el-select>
         <div class="test-controls">
           <el-input-number v-model="testCount" :min="1" :max="100" label="获取数量" />
           <el-button type="primary" :loading="testing" @click="doTestGenerate">立即发号</el-button>
@@ -285,7 +300,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import {
   Plus, Grid, Opportunity, Delete, List, Monitor,
   RefreshLeft, CaretRight, CaretBottom,
@@ -297,7 +312,7 @@ import {
   fetchNamespaceChangeLogs, rollbackNamespace, createNamespace,
   saveNamespaceDraftConfig, fetchNamespaceVersions, fetchNamespaceInstances,
 } from '@/api/namespace'
-import { batchGenerateIds, generateId } from '@/api/id'
+import { testBatchGenerateIds, testGenerateId } from '@/api/id'
 import type {
   NamespaceInstanceStatusRecord,
   NamespaceRecord,
@@ -363,12 +378,18 @@ const tableData = ref<any[]>([])
 const pagination = reactive({ total: 0 })
 const queryForm = reactive({ pageNo: 1, pageSize: 10, keyword: '', status: undefined, idMode: undefined })
 
-const nsStats = [
-  { label: 'Namespace 总量', value: '42', icon: Grid, type: 'primary' },
-  { label: '活跃模式', value: 'SEGMENT', icon: Opportunity, type: 'success' },
-  { label: '今日生成 ID', value: '2.4M', icon: List, type: 'warning' },
-  { label: '同步异常', value: '0', icon: Monitor, type: 'danger' },
-]
+const nsStats = computed(() => {
+  const enabledCount = tableData.value.filter((item) => item.status === 1).length
+  const segmentCount = tableData.value.filter((item) => item.idMode === 1).length
+  const snowflakeCount = tableData.value.filter((item) => item.idMode === 2).length
+
+  return [
+    { label: 'Namespace 总量', value: String(pagination.total), icon: Grid, type: 'primary' },
+    { label: '已启用', value: String(enabledCount), icon: Opportunity, type: 'success' },
+    { label: 'SEGMENT', value: String(segmentCount), icon: List, type: 'warning' },
+    { label: 'SNOWFLAKE', value: String(snowflakeCount), icon: Monitor, type: 'danger' },
+  ]
+})
 
 const loadNamespaces = async () => {
   tableLoading.value = true
@@ -394,33 +415,73 @@ const handleReset = () => { Object.assign(queryForm, { keyword: '', status: unde
 const testVisible = ref(false)
 const testNs = ref<NamespaceRecord | null>(null)
 const testing = ref(false)
+const testNodeLoading = ref(false)
 const testCount = ref(1)
 const testResultIds = ref<string[]>([])
+const testInstances = ref<NamespaceInstanceStatusRecord[]>([])
+const selectedTestInstanceId = ref('')
 
-const openTestDialog = (row: NamespaceRecord) => {
+const activeTestInstances = computed(() =>
+  testInstances.value.filter((item) => item.runtimeStatus === 'ACTIVE' && item.host),
+)
+
+const openTestDialog = async (row: NamespaceRecord) => {
   testNs.value = row
   testResultIds.value = []
+  testInstances.value = []
+  selectedTestInstanceId.value = ''
   testVisible.value = true
+  testNodeLoading.value = true
+  try {
+    testInstances.value = await fetchNamespaceInstances(row.id)
+  } finally {
+    testNodeLoading.value = false
+  }
 }
 
 const doTestGenerate = async () => {
   if (!testNs.value) return
   testing.value = true
   try {
+    const baseURL = selectedTestBaseUrl()
     if (testCount.value === 1) {
-      const response = await generateId({ namespaceCode: testNs.value.namespaceCode })
+      const response = await testGenerateId({ namespaceCode: testNs.value.namespaceCode }, baseURL)
       testResultIds.value = [response.id]
     } else {
-      const response = await batchGenerateIds({
-        namespaceCode: testNs.value.namespaceCode,
-        count: testCount.value,
-      })
+      const response = await testBatchGenerateIds(
+        {
+          namespaceCode: testNs.value.namespaceCode,
+          count: testCount.value,
+        },
+        baseURL,
+      )
       testResultIds.value = response.ids
     }
     ElMessage.success('发号成功')
   } finally {
     testing.value = false
   }
+}
+
+const selectedTestBaseUrl = () => {
+  const instance = activeTestInstances.value.find(
+    (item) => item.instanceId === selectedTestInstanceId.value,
+  )
+  if (!instance) {
+    return undefined
+  }
+  return hostToAdminApiBaseUrl(instance.host)
+}
+
+const hostToAdminApiBaseUrl = (host: string) => {
+  const address = host.includes('/') ? host.slice(host.lastIndexOf('/') + 1) : host
+  if (!address) {
+    return undefined
+  }
+  const origin = address.startsWith('http://') || address.startsWith('https://')
+    ? address
+    : `http://${address}`
+  return `${origin.replace(/\/$/, '')}/api`
 }
 
 // Rollback Dialog
@@ -430,6 +491,10 @@ const historyVersions = ref<NamespaceVersionRecord[]>([])
 const currentRollbackNs = ref<NamespaceRecord | null>(null)
 
 const openRollbackDialog = async (row: NamespaceRecord) => {
+  if (row.idMode === 2) {
+    ElMessage.warning('Snowflake 模式无需版本回滚')
+    return
+  }
   currentRollbackNs.value = row
   rollbackVisible.value = true
   historyLoading.value = true

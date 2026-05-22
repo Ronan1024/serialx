@@ -38,8 +38,12 @@ serialx:
   service:
     auth:
       signature:
-        enabled: ${SERIALX_APP_AUTH_ENABLED:true}
+        enabled: ${SERIALX_APP_AUTH_ENABLED:false}
         signature-expire-window: ${SERIALX_APP_SIGNATURE_EXPIRE_WINDOW:5m}
+    call-stats:
+      enabled: ${SERIALX_CALL_STATS_ENABLED:true}
+      flush-interval: ${SERIALX_CALL_STATS_FLUSH_INTERVAL:10s}
+      max-qps: ${SERIALX_SERVICE_MAX_QPS:0}
     snowflake:
       worker-id: ${SERIALX_SNOWFLAKE_WORKER_ID:0}
       datacenter-id: ${SERIALX_SNOWFLAKE_DATACENTER_ID:0}

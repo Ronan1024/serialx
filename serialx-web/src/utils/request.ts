@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { API_BASE_URL, SERVICE_API_BASE_URL } from '@/config/api'
 import { clearAuthState, getAccessToken } from '@/utils/auth'
 
-const createRequest = (baseURL: string) => {
+export const createRequest = (baseURL: string) => {
   const instance = axios.create({
     baseURL,
     timeout: 10000,

@@ -2,7 +2,6 @@ import './assets/main.css'
 import 'element-plus/dist/index.css'
 
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
 import {
   ElAlert,
   ElBreadcrumb,
@@ -102,7 +101,6 @@ for (const component of elementComponents) {
   }
 }
 
-app.use(createPinia())
 app.use(router)
 app.use(ElLoading)
 

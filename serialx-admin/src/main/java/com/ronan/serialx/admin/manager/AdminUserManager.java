@@ -42,8 +42,8 @@ public class AdminUserManager {
      */
     public PageResult<AdminUserResponse> pageUsers(long pageNo, long pageSize, String keyword, Integer status) {
         validateStatus(status);
-        long normalizedPageNo = Math.max(pageNo, 1);
-        long normalizedPageSize = Math.min(Math.max(pageSize, 1), 100);
+        long normalizedPageNo = Math.clamp(pageNo, 1, Long.MAX_VALUE);
+        long normalizedPageSize = Math.clamp(pageSize, 1, 100);
         Page<AdminUserDO> page = adminUserService.pageUsers(normalizedPageNo, normalizedPageSize, keyword, status);
         List<AdminUserResponse> records = page.getRecords().stream()
                 .map(this::toResponse)
@@ -63,6 +63,7 @@ public class AdminUserManager {
      */
     public AdminUserResponse createUser(AdminUserCreateRequest request) {
         Assert.isFalse(adminUserService.existsByUsername(request.getUsername()), BusinessErrorCode.ADMIN_USERNAME_EXISTS);
+
         AdminUserDO user = new AdminUserDO();
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
