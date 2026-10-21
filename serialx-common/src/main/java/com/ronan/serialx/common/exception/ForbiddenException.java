@@ -2,6 +2,8 @@ package com.ronan.serialx.common.exception;
 
 import lombok.Getter;
 
+import java.util.function.Supplier;
+
 /**
  * 无权限异常。
  */
@@ -16,6 +18,10 @@ public class ForbiddenException extends RuntimeException {
     public ForbiddenException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
+    }
+
+    public static Supplier<? extends RuntimeException> supplier(ErrorCode errorCode) {
+        return () -> new ForbiddenException(errorCode, errorCode.getMessage());
     }
 
     /**

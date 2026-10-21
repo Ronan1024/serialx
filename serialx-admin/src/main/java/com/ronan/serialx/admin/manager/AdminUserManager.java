@@ -9,6 +9,7 @@ import com.ronan.serialx.admin.dto.AdminUserPasswordRequest;
 import com.ronan.serialx.admin.dto.AdminUserResponse;
 import com.ronan.serialx.admin.dto.AdminUserUpdateRequest;
 import com.ronan.serialx.admin.service.AdminUserService;
+import com.ronan.serialx.common.enums.AdminUserRoleEnum;
 import com.ronan.serialx.common.enums.AdminUserStatusEnum;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.BizException;
@@ -41,7 +42,6 @@ public class AdminUserManager {
      * 分页查询后台用户。
      */
     public PageResult<AdminUserResponse> pageUsers(long pageNo, long pageSize, String keyword, Integer status) {
-        validateStatus(status);
         long normalizedPageNo = Math.clamp(pageNo, 1, Long.MAX_VALUE);
         long normalizedPageSize = Math.clamp(pageSize, 1, 100);
         Page<AdminUserDO> page = adminUserService.pageUsers(normalizedPageNo, normalizedPageSize, keyword, status);
@@ -62,8 +62,11 @@ public class AdminUserManager {
      * 创建后台用户。
      */
     public AdminUserResponse createUser(AdminUserCreateRequest request) {
-        Assert.isFalse(adminUserService.existsByUsername(request.getUsername()), BusinessErrorCode.ADMIN_USERNAME_EXISTS);
-
+        String role = normalizeRole(request.getRoles());
+        validateAssignableRole(role);
+        if (adminUserService.existsByUsername(request.getUsername())) {
+            throw new BizException(BusinessErrorCode.ADMIN_USERNAME_EXISTS);
+        }
         AdminUserDO user = new AdminUserDO();
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -71,7 +74,7 @@ public class AdminUserManager {
         user.setEmail(request.getEmail());
         user.setMobile(request.getMobile());
         user.setStatus(AdminUserStatusEnum.ENABLED.getCode());
-        user.setRoles(normalizeRoles(request.getRoles()));
+        user.setRoles(role);
         return toResponse(adminUserService.create(user));
     }
 
@@ -80,12 +83,21 @@ public class AdminUserManager {
      */
     public AdminUserResponse updateUser(Long id, AdminUserUpdateRequest request) {
         AdminUserDO user = requireUser(id);
+        validateStatus(request.getStatus());
+        boolean systemAdmin = isSystemAdmin(user);
+        validateSystemAdminUpdate(user, request);
+
         user.setDisplayName(normalizeDisplayName(request.getDisplayName(), user.getUsername()));
         user.setEmail(request.getEmail());
         user.setMobile(request.getMobile());
-        validateStatus(request.getStatus());
-        user.setStatus(request.getStatus() == null ? user.getStatus() : request.getStatus());
-        user.setRoles(normalizeRoles(request.getRoles()));
+        if (!systemAdmin) {
+            user.setStatus(request.getStatus() == null ? user.getStatus() : request.getStatus());
+            if (StringUtils.hasText(request.getRoles())) {
+                String role = normalizeRole(request.getRoles());
+                validateAssignableRole(role);
+                user.setRoles(role);
+            }
+        }
         adminUserService.update(user);
         return toResponse(requireUser(id));
     }
@@ -102,14 +114,17 @@ public class AdminUserManager {
      * 删除后台用户。
      */
     public void deleteUser(Long id) {
-        requireUser(id);
+        AdminUserDO user = requireUser(id);
+        if (isSystemAdmin(user)) {
+            throw new BizException(BusinessErrorCode.ADMIN_FORBIDDEN);
+        }
         adminUserService.deleteById(id);
     }
 
     /**
      * 查询用户，不存在时抛出业务异常。
      */
-    private AdminUserDO requireUser(Long id) {
+    public AdminUserDO requireUser(Long id) {
         AdminUserDO user = adminUserService.getById(id);
         Assert.notNull(user, BizException.supplier(BusinessErrorCode.ADMIN_USER_NOT_FOUND));
         return user;
@@ -123,6 +138,38 @@ public class AdminUserManager {
     }
 
     /**
+     * 禁止修改系统管理员的角色和状态。
+     */
+    private void validateSystemAdminUpdate(AdminUserDO user, AdminUserUpdateRequest request) {
+        if (!isSystemAdmin(user)) {
+            return;
+        }
+        boolean statusChanged = request.getStatus() != null && !request.getStatus().equals(user.getStatus());
+        boolean rolesChanged = StringUtils.hasText(request.getRoles())
+                && !request.getRoles().trim().equals(user.getRoles());
+        if (statusChanged || rolesChanged) {
+            throw new BizException(BusinessErrorCode.ADMIN_FORBIDDEN);
+        }
+    }
+
+    private boolean isSystemAdmin(AdminUserDO user) {
+        return AdminUserRoleEnum.ADMIN.isIncludedIn(user.getRoles());
+    }
+
+    /**
+     * ADMIN 仅允许由系统启动初始化创建。
+     */
+    private void validateAssignableRole(String role) {
+        if (AdminUserRoleEnum.ADMIN.isIncludedIn(role)) {
+            throw new BizException(BusinessErrorCode.ADMIN_FORBIDDEN);
+        }
+        if (!AdminUserRoleEnum.OPERATOR.getCode().equals(role)
+                && !AdminUserRoleEnum.VIEWER.getCode().equals(role)) {
+            throw new BizException(BusinessErrorCode.ADMIN_PARAM_INVALID);
+        }
+    }
+
+    /**
      * 规范化展示名称。
      */
     private String normalizeDisplayName(String displayName, String username) {
@@ -132,8 +179,8 @@ public class AdminUserManager {
     /**
      * 规范化用户角色。
      */
-    private String normalizeRoles(String roles) {
-        return StringUtils.hasText(roles) ? roles.trim() : "ADMIN";
+    private String normalizeRole(String role) {
+        return StringUtils.hasText(role) ? role.trim() : AdminUserRoleEnum.OPERATOR.getCode();
     }
 
     /**

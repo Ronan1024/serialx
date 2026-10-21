@@ -51,6 +51,7 @@ public class AdminUserCreateRequest {
     /**
      * 用户角色。
      */
+    @NotBlank(message = "用户角色不能为空")
     @Size(max = 128, message = "角色长度不能超过 128")
     private String roles;
 }

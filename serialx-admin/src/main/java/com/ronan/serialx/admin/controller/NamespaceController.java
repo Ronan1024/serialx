@@ -5,12 +5,12 @@ import java.util.List;
 import com.ronan.serialx.admin.dto.NamespaceChangeLogResponse;
 import com.ronan.serialx.admin.dto.NamespaceCreateRequest;
 import com.ronan.serialx.admin.dto.NamespaceDraftConfigRequest;
+import com.ronan.serialx.admin.dto.NamespacePageQueryRequest;
 import com.ronan.serialx.admin.dto.NamespaceResponse;
 import com.ronan.serialx.admin.dto.NamespaceUpdateRequest;
 import com.ronan.serialx.admin.dto.NamespaceVersionResponse;
 import com.ronan.serialx.admin.dto.ServiceInstanceConfigStatusResponse;
 import com.ronan.serialx.admin.manager.NamespaceManager;
-import com.ronan.serialx.common.response.ApiResponse;
 import com.ronan.serialx.common.response.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -39,112 +38,111 @@ public class NamespaceController {
     private final NamespaceManager namespaceManager;
 
     /**
-     * 分页查询 Namespace。
+     * 接收管理列表的分页与筛选条件，返回控制面 Namespace 数据。
+     *
+     * <p>请求体绑定后执行 DTO 声明的 Bean Validation 约束；筛选组合与配置装配交由业务层处理。
+     *
+     * @param request 分页参数及可选筛选条件
+     * @return 筛选后的总记录数、分页信息与当前页数据，不含实例同步状态
      */
-    @GetMapping
-    public ApiResponse<PageResult<NamespaceResponse>> pageNamespaces(
-            @RequestParam(defaultValue = "1") long pageNo,
-            @RequestParam(defaultValue = "20") long pageSize,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Integer idMode) {
-        return ApiResponse.success(namespaceManager.pageNamespaces(pageNo, pageSize, keyword, status, idMode));
+    @PostMapping("/page")
+    public PageResult<NamespaceResponse> pageNamespaces(@Validated @RequestBody NamespacePageQueryRequest request) {
+        return namespaceManager.pageNamespaces(request);
     }
 
     /**
      * 查询 Namespace 详情。
      */
     @GetMapping("/{id}")
-    public ApiResponse<NamespaceResponse> getNamespace(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.getNamespace(id));
+    public NamespaceResponse getNamespace(@PathVariable Long id) {
+        return namespaceManager.getNamespace(id);
     }
 
     /**
      * 创建 Namespace。
      */
     @PostMapping
-    public ApiResponse<NamespaceResponse> createNamespace(@Validated @RequestBody NamespaceCreateRequest request) {
-        return ApiResponse.success(namespaceManager.createNamespace(request));
+    public NamespaceResponse createNamespace(@Validated @RequestBody NamespaceCreateRequest request) {
+        return namespaceManager.createNamespace(request);
     }
 
     /**
      * 更新 Namespace 基础信息。
      */
     @PutMapping("/{id}")
-    public ApiResponse<NamespaceResponse> updateNamespace(@PathVariable Long id, @Validated @RequestBody NamespaceUpdateRequest request) {
-        return ApiResponse.success(namespaceManager.updateNamespace(id, request));
+    public NamespaceResponse updateNamespace(@PathVariable Long id, @Validated @RequestBody NamespaceUpdateRequest request) {
+        return namespaceManager.updateNamespace(id, request);
     }
 
     /**
      * 保存草稿配置。
      */
     @PutMapping("/{id}/config")
-    public ApiResponse<NamespaceResponse> saveDraftConfig(@PathVariable Long id, @Valid @RequestBody NamespaceDraftConfigRequest request) {
-        return ApiResponse.success(namespaceManager.saveDraftConfig(id, request));
+    public NamespaceResponse saveDraftConfig(@PathVariable Long id, @Valid @RequestBody NamespaceDraftConfigRequest request) {
+        return namespaceManager.saveDraftConfig(id, request);
     }
 
     /**
      * 发布 Namespace。
      */
     @PostMapping("/{id}/publish")
-    public ApiResponse<NamespaceResponse> publishNamespace(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.publishNamespace(id));
+    public NamespaceResponse publishNamespace(@PathVariable Long id) {
+        return namespaceManager.publishNamespace(id);
     }
 
     /**
      * 启用 Namespace。
      */
     @PostMapping("/{id}/enable")
-    public ApiResponse<NamespaceResponse> enableNamespace(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.enableNamespace(id));
+    public NamespaceResponse enableNamespace(@PathVariable Long id) {
+        return namespaceManager.enableNamespace(id);
     }
 
     /**
      * 停用 Namespace。
      */
     @PostMapping("/{id}/disable")
-    public ApiResponse<NamespaceResponse> disableNamespace(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.disableNamespace(id));
+    public NamespaceResponse disableNamespace(@PathVariable Long id) {
+        return namespaceManager.disableNamespace(id);
     }
 
     /**
      * 回滚 Namespace 版本。
      */
     @PostMapping("/{id}/rollback/{version}")
-    public ApiResponse<NamespaceResponse> rollbackNamespace(@PathVariable Long id, @PathVariable Integer version) {
-        return ApiResponse.success(namespaceManager.rollbackNamespace(id, version));
+    public NamespaceResponse rollbackNamespace(@PathVariable Long id, @PathVariable Integer version) {
+        return namespaceManager.rollbackNamespace(id, version);
     }
 
     /**
      * 删除 Namespace。
      */
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteNamespace(@PathVariable Long id) {
+    public void deleteNamespace(@PathVariable Long id) {
         namespaceManager.deleteNamespace(id);
-        return ApiResponse.success();
     }
 
     /**
      * 查询 Namespace 变更日志。
      */
     @GetMapping("/{id}/logs")
-    public ApiResponse<List<NamespaceChangeLogResponse>> listChangeLogs(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.listChangeLogs(id));
+    public List<NamespaceChangeLogResponse> listChangeLogs(@PathVariable Long id) {
+        return namespaceManager.listChangeLogs(id);
     }
 
     /**
      * 查询 Namespace 已发布版本。
      */
     @GetMapping("/{id}/versions")
-    public ApiResponse<List<NamespaceVersionResponse>> listPublishedVersions(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.listPublishedVersions(id));
+    public List<NamespaceVersionResponse> listPublishedVersions(@PathVariable Long id) {
+        return namespaceManager.listPublishedVersions(id);
     }
 
     /**
      * 查询 Namespace 实例配置状态。
      */
     @GetMapping("/{id}/instances")
-    public ApiResponse<List<ServiceInstanceConfigStatusResponse>> listInstanceStatuses(@PathVariable Long id) {
-        return ApiResponse.success(namespaceManager.listInstanceStatuses(id));
+    public List<ServiceInstanceConfigStatusResponse> listInstanceStatuses(@PathVariable Long id) {
+        return namespaceManager.listInstanceStatuses(id);
     }
 }

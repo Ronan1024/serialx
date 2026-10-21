@@ -28,8 +28,6 @@ import com.ronan.serialx.infra.mapper.NamespaceMapper;
 import com.ronan.serialx.support.ServiceInstanceIdentity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -62,49 +60,53 @@ public class NamespaceRuntimeLoader {
     private final ObjectMapper objectMapper;
 
     /**
-     * 应用启动后执行一次 Namespace 全量加载。
-     */
-    @EventListener(ApplicationReadyEvent.class)
-    public void loadOnApplicationReady() {
-        loadPublishedNamespaces();
-    }
-
-    /**
      * 启动或定时全量加载已启用、已发布 Namespace。
      */
-    public void loadPublishedNamespaces() {
+    public synchronized void loadPublishedNamespaces() {
+        log.debug("Namespace 全量加载开始，runtimeId={}", serviceInstanceIdentity.getRuntimeId());
         List<NamespaceDO> namespaces = namespaceMapper.selectList(new LambdaQueryWrapper<NamespaceDO>()
                 .eq(NamespaceDO::getDeleted, NOT_DELETED)
                 .eq(NamespaceDO::getStatus, NamespaceStatusEnum.ENABLED.getCode())
                 .gt(NamespaceDO::getCurrentVersion, MIN_PUBLISHED_VERSION));
-        Set<String> enabledCodes = namespaces.stream()
+        Set<String> codes = namespaces.stream()
                 .map(NamespaceDO::getNamespaceCode)
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toSet());
-        namespaces.forEach(namespace -> refresh(namespace, namespace.getCurrentVersion()));
-        namespaceRegistry.listAll().stream()
-                .map(NamespaceRuntime::getNamespaceCode)
-                .filter(namespaceCode -> !enabledCodes.contains(namespaceCode))
-                .toList()
-                .forEach(namespaceCode -> remove(namespaceCode, ServiceInstanceRedisConstants.OFFLINE));
+        namespaceRegistry.listAll().stream().map(NamespaceRuntime::getNamespaceCode).forEach(codes::add);
+        // 全量快照只枚举候选，逐个重查，避免用旧快照移除已经重新启用的运行时。
+        codes.forEach(namespaceCode -> refresh(namespaceCode, null));
+        log.debug("Namespace 全量加载完成，runtimeId={}, candidateCount={}, loadedCount={}",
+                serviceInstanceIdentity.getRuntimeId(), codes.size(), namespaceRegistry.listAll().size());
     }
 
     /**
-     * 刷新单个 Namespace。
+     * 刷新单个 Namespace，消息版本仅作提示，以数据库当前生效版本为准。
      */
-    public void refresh(String namespaceCode, Integer version) {
+    public synchronized void refresh(String namespaceCode, Integer version) {
         if (!StringUtils.hasText(namespaceCode)) {
             return;
         }
+        log.debug("Namespace 刷新开始，namespaceCode={}, hintedVersion={}", namespaceCode, version);
         NamespaceDO namespace = selectFirst(namespaceMapper, new LambdaQueryWrapper<NamespaceDO>()
                 .eq(NamespaceDO::getNamespaceCode, namespaceCode)
                 .eq(NamespaceDO::getDeleted, NOT_DELETED)
                 .orderByDesc(NamespaceDO::getId));
-        if (namespace == null || !Objects.equals(NamespaceStatusEnum.ENABLED.getCode(), namespace.getStatus())) {
+        if (namespace == null) {
+            remove(namespaceCode, ServiceInstanceRedisConstants.OFFLINE);
+            return;
+        }
+        if (!Objects.equals(NamespaceStatusEnum.ENABLED.getCode(), namespace.getStatus())
+                || namespace.getCurrentVersion() == null || namespace.getCurrentVersion() <= 0) {
             remove(namespaceCode, ServiceInstanceRedisConstants.DISABLED);
             return;
         }
-        Integer targetVersion = version == null ? namespace.getCurrentVersion() : version;
+        Integer targetVersion = namespace.getCurrentVersion();
+        NamespaceRuntime existing = namespaceRegistry.get(namespaceCode).orElse(null);
+        if (existing != null && Objects.equals(existing.getVersion(), targetVersion)) {
+            log.debug("Namespace 版本未变化，namespaceCode={}, version={}", namespaceCode, targetVersion);
+            reportNamespaceStatus(namespaceCode, targetVersion, existing.getRuntimeStatus());
+            return;
+        }
         refresh(namespace, targetVersion);
     }
 
@@ -117,7 +119,7 @@ public class NamespaceRuntimeLoader {
                 .orderByDesc(NamespaceConfigDO::getId));
         if (config == null) {
             reportNamespaceStatus(namespaceCode, targetVersion, ServiceInstanceRedisConstants.LOAD_FAILED);
-            log.warn("published namespace config not found, namespaceCode={}, version={}", namespaceCode, targetVersion);
+            log.warn("Namespace 已发布配置缺失，namespaceCode={}, version={}", namespaceCode, targetVersion);
             return;
         }
         try {
@@ -130,21 +132,32 @@ public class NamespaceRuntimeLoader {
                     .config(configJson)
                     .build());
             namespaceRegistry.replace(namespaceCode, runtime);
-            reportNamespaceStatus(namespaceCode, config.getVersion(), ServiceInstanceRedisConstants.ACTIVE);
+            log.info("Namespace 运行时加载完成，namespaceCode={}, version={}, status={}",
+                    namespaceCode, config.getVersion(), runtime.getRuntimeStatus());
+            reportNamespaceStatus(namespaceCode, config.getVersion(), runtime.getRuntimeStatus());
         } catch (Exception ex) {
             reportNamespaceStatus(namespaceCode, targetVersion, ServiceInstanceRedisConstants.LOAD_FAILED);
-            log.warn("load namespace runtime failed, namespaceCode={}, version={}", namespaceCode, targetVersion, ex);
+            // 解析异常可能包含配置正文，只记录可关联的元数据和异常类型。
+            log.warn("Namespace 运行时加载失败，namespaceCode={}, version={}, exceptionType={}",
+                    namespaceCode, targetVersion, ex.getClass().getSimpleName());
         }
     }
 
     /**
      * 移除本地 Namespace 运行时。
      */
-    public void remove(String namespaceCode, String runtimeStatus) {
+    public synchronized void remove(String namespaceCode, String runtimeStatus) {
         if (!StringUtils.hasText(namespaceCode)) {
             return;
         }
+        NamespaceRuntime previous = namespaceRegistry.get(namespaceCode).orElse(null);
         namespaceRegistry.remove(namespaceCode);
+        if (previous != null) {
+            log.info("Namespace 本地运行时已移除，namespaceCode={}, previousVersion={}, status={}",
+                    namespaceCode, previous.getVersion(), runtimeStatus);
+        } else {
+            log.debug("Namespace 无本地运行时，无需移除，namespaceCode={}, status={}", namespaceCode, runtimeStatus);
+        }
         reportNamespaceStatus(namespaceCode, null, runtimeStatus);
     }
 
@@ -156,6 +169,14 @@ public class NamespaceRuntimeLoader {
         status.setLoadedVersion(loadedVersion);
         status.setRuntimeStatus(runtimeStatus);
         status.setLastReportTime(LocalDateTime.now());
-        statusWriter.saveOrUpdate(status);
+        try {
+            statusWriter.saveOrUpdate(status);
+            log.debug("Namespace 状态上报完成，runtimeId={}, namespaceCode={}, version={}, status={}",
+                    serviceInstanceIdentity.getRuntimeId(), namespaceCode, loadedVersion, runtimeStatus);
+        } catch (RuntimeException ex) {
+            // Redis 是展示快照，不是节点租约或配置加载的事实来源。
+            log.warn("Namespace 状态上报失败，保留本地运行时，runtimeId={}, namespaceCode={}, version={}, exceptionType={}",
+                    serviceInstanceIdentity.getRuntimeId(), namespaceCode, loadedVersion, ex.getClass().getSimpleName());
+        }
     }
 }

@@ -51,10 +51,10 @@ public final class Assert {
     }
 
     /**
-     * 断言对象为 null ， 则抛出自定义异常
+     * 兼容旧调用：对象为 null 时抛出异常，新代码使用 notNull。
      */
-    public static void  isNull(Object object, Supplier<? extends RuntimeException> exceptionSupplier) {
-        isTrue(object == null, exceptionSupplier);
+    public static void isNull(Object object, Supplier<? extends RuntimeException> exceptionSupplier) {
+        notNull(object, exceptionSupplier);
     }
 
     /**

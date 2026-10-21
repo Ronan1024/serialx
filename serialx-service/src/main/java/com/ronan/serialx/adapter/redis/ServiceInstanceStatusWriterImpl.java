@@ -1,14 +1,14 @@
 package com.ronan.serialx.adapter.redis;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
+import static com.ronan.serialx.common.node.NodeTiming.HEARTBEAT_TTL;
+
 import java.util.Map;
 
 import com.ronan.serialx.common.constant.ServiceInstanceRedisConstants;
 import com.ronan.serialx.config.ServiceInstanceProperties;
 import com.ronan.serialx.domain.model.ServiceInstanceInfo;
 import com.ronan.serialx.infra.entity.ServiceInstanceConfigStatusDO;
+import com.ronan.serialx.infra.support.RedisSnapshotCodec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -32,7 +32,7 @@ public class ServiceInstanceStatusWriterImpl {
      */
     public void saveOnline(ServiceInstanceInfo instanceInfo) {
         String key = String.format(ServiceInstanceRedisConstants.INSTANCE_KEY_FORMAT, instanceInfo.getInstanceId());
-        setHashValue(key, toInstanceHash(instanceInfo));
+        setHashValue(key, RedisSnapshotCodec.toHash(instanceInfo));
         refreshHeartbeat(instanceInfo.getInstanceId(), instanceInfo.getRuntimeId());
     }
 
@@ -41,7 +41,7 @@ public class ServiceInstanceStatusWriterImpl {
      */
     public void saveOffline(ServiceInstanceInfo instanceInfo) {
         String key = String.format(ServiceInstanceRedisConstants.INSTANCE_KEY_FORMAT, instanceInfo.getInstanceId());
-        setHashValue(key, toInstanceHash(instanceInfo));
+        setHashValue(key, RedisSnapshotCodec.toHash(instanceInfo));
         removeHeartbeat(instanceInfo.getInstanceId());
     }
 
@@ -53,7 +53,7 @@ public class ServiceInstanceStatusWriterImpl {
                 ServiceInstanceRedisConstants.INSTANCE_HEARTBEAT_KEY_FORMAT,
                 instanceId);
         String runtimeId = StringUtils.hasText(runtimeIdValue) ? runtimeIdValue : instanceId;
-        return Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(heartbeatKey, runtimeId, heartbeatTtl()));
+        return Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(heartbeatKey, runtimeId, HEARTBEAT_TTL));
     }
 
     /**
@@ -62,7 +62,7 @@ public class ServiceInstanceStatusWriterImpl {
     public void saveOrUpdate(ServiceInstanceConfigStatusDO status) {
         String namespaceCode = StringUtils.hasText(status.getNamespaceCode()) ? status.getNamespaceCode() : ServiceInstanceRedisConstants.NODE_NAMESPACE;
         String key = String.format(ServiceInstanceRedisConstants.INSTANCE_NAMESPACE_KEY_FORMAT, status.getInstanceId(), namespaceCode);
-        setHashValue(key, toNamespaceStatusHash(status));
+        setHashValue(key, RedisSnapshotCodec.toHash(status));
     }
 
     private void setHashValue(String key, Map<String, String> value) {
@@ -76,7 +76,7 @@ public class ServiceInstanceStatusWriterImpl {
                 ServiceInstanceRedisConstants.INSTANCE_HEARTBEAT_KEY_FORMAT,
                 instanceId);
         String runtimeId = StringUtils.hasText(runtimeIdValue) ? runtimeIdValue : instanceId;
-        stringRedisTemplate.opsForValue().set(heartbeatKey, runtimeId, heartbeatTtl());
+        stringRedisTemplate.opsForValue().set(heartbeatKey, runtimeId, HEARTBEAT_TTL);
     }
 
     private void removeHeartbeat(String instanceId) {
@@ -86,43 +86,4 @@ public class ServiceInstanceStatusWriterImpl {
         stringRedisTemplate.delete(heartbeatKey);
     }
 
-    private Duration heartbeatTtl() {
-        return serviceInstanceProperties.getReportInterval().multipliedBy(3);
-    }
-
-    private Map<String, String> toInstanceHash(ServiceInstanceInfo instanceInfo) {
-        Map<String, String> map = new LinkedHashMap<>();
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.INSTANCE_ID, instanceInfo.getInstanceId());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.RUNTIME_ID, instanceInfo.getRuntimeId());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.HOST_NAME, instanceInfo.getHostName());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.IP, instanceInfo.getIp());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.PORT, instanceInfo.getPort());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.STATUS, instanceInfo.getStatus());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.CREATE_TIME, formatTime(instanceInfo.getCreateTime()));
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.LAST_REPORT_TIME, formatTime(instanceInfo.getLastReportTime()));
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.LAST_OFFLINE_TIME, formatTime(instanceInfo.getLastOfflineTime()));
-        return map;
-    }
-
-    private Map<String, String> toNamespaceStatusHash(ServiceInstanceConfigStatusDO status) {
-        Map<String, String> map = new LinkedHashMap<>();
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.INSTANCE_ID, status.getInstanceId());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.HOST, status.getHost());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.NAMESPACE_CODE, status.getNamespaceCode());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.LOADED_VERSION, status.getLoadedVersion());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.RUNTIME_STATUS, status.getRuntimeStatus());
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.LAST_REPORT_TIME, formatTime(status.getLastReportTime()));
-        putIfNotNull(map, ServiceInstanceRedisConstants.Fields.LAST_OFFLINE_TIME, formatTime(status.getLastOfflineTime()));
-        return map;
-    }
-
-    private void putIfNotNull(Map<String, String> map, String key, Object value) {
-        if (value != null) {
-            map.put(key, String.valueOf(value));
-        }
-    }
-
-    private String formatTime(LocalDateTime time) {
-        return time == null ? null : time.toString();
-    }
 }

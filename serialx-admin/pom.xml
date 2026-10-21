@@ -14,6 +14,10 @@
     <dependencies>
         <dependency>
             <groupId>com.ronan.serialx</groupId>
+            <artifactId>serialx-coordinator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ronan.serialx</groupId>
             <artifactId>serialx-common</artifactId>
         </dependency>
         <dependency>

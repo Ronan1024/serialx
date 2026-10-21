@@ -1,6 +1,5 @@
 package com.ronan.serialx.api.controller;
 
-import com.ronan.serialx.common.response.ApiResponse;
 import com.ronan.serialx.api.dto.IdBatchGenerateRequest;
 import com.ronan.serialx.api.dto.IdBatchGenerateResponse;
 import com.ronan.serialx.api.dto.IdGenerateRequest;
@@ -30,23 +29,23 @@ public class IdGenerateController {
      * 生成单个 ID。
      */
     @PostMapping("/next")
-    public ApiResponse<IdGenerateResponse> nextId(@Valid @RequestBody IdGenerateRequest request) {
-        return ApiResponse.success(idGenerateManager.nextId(request.getNamespaceCode()));
+    public IdGenerateResponse nextId(@Valid @RequestBody IdGenerateRequest request) {
+        return idGenerateManager.nextId(request.getNamespaceCode());
     }
 
     /**
      * 批量生成 ID。
      */
     @PostMapping("/batch")
-    public ApiResponse<IdBatchGenerateResponse> batchNextId(@Valid @RequestBody IdBatchGenerateRequest request) {
-        return ApiResponse.success(idGenerateManager.batchNextId(request.getNamespaceCode(), request.getCount()));
+    public IdBatchGenerateResponse batchNextId(@Valid @RequestBody IdBatchGenerateRequest request) {
+        return idGenerateManager.batchNextId(request.getNamespaceCode(), request.getCount());
     }
 
     /**
      * 查询 Namespace 运行时状态。
      */
     @GetMapping("/runtime/{namespaceCode}")
-    public ApiResponse<NamespaceRuntimeStatusResponse> runtimeStatus(@PathVariable String namespaceCode) {
-        return ApiResponse.success(idGenerateManager.getRuntimeStatus(namespaceCode));
+    public NamespaceRuntimeStatusResponse runtimeStatus(@PathVariable String namespaceCode) {
+        return idGenerateManager.getRuntimeStatus(namespaceCode);
     }
 }

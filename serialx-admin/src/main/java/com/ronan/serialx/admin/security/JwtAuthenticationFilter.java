@@ -49,6 +49,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final AdminApiResponseWriter responseWriter;
 
+    /** 内部节点接口仅使用机器认证；忽略其 JWT，防止后台身份介入内部安全链。 */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return path.equals("/internal/service-nodes") || path.startsWith("/internal/service-nodes/");
+    }
+
     /**
      * 从请求头解析 JWT 并写入 Spring Security 上下文。
      */

@@ -23,6 +23,10 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 serialx:
+  outbound:
+    http:
+      connect-timeout: ${SERIALX_HTTP_CONNECT_TIMEOUT:${SERIALX_NODE_CONNECT_TIMEOUT:1s}}
+      request-timeout: ${SERIALX_HTTP_REQUEST_TIMEOUT:${SERIALX_NODE_REQUEST_TIMEOUT:2s}}
   service:
     auth:
       signature:
@@ -33,15 +37,13 @@ serialx:
       flush-interval: ${SERIALX_CALL_STATS_FLUSH_INTERVAL:10s}
       max-qps: ${SERIALX_SERVICE_MAX_QPS:0}
     snowflake:
-      worker-id: ${SERIALX_SNOWFLAKE_WORKER_ID:0}
-      datacenter-id: ${SERIALX_SNOWFLAKE_DATACENTER_ID:0}
-      worker-id-bits: ${SERIALX_SNOWFLAKE_WORKER_ID_BITS:5}
-      datacenter-id-bits: ${SERIALX_SNOWFLAKE_DATACENTER_ID_BITS:5}
-      sequence-bits: ${SERIALX_SNOWFLAKE_SEQUENCE_BITS:12}
+      # 节点身份及固定 5/5/12 布局由租约返回，不接受人工节点编号。
+      admin-url: ${SERIALX_ADMIN_URL:http://localhost:8080}
+      machine-token: ${SERIALX_SERVICE_NODE_TOKEN:7577c6c19f0cf78ec967d59c52ea12ff}
+      startup-attempts: ${SERIALX_NODE_STARTUP_ATTEMPTS:3}
     instance:
       channel: ${SERIALX_NAMESPACE_CHANGE_CHANNEL:serialx:namespace:change}
       full-sync-interval: ${SERIALX_NAMESPACE_FULL_SYNC_INTERVAL:30s}
-      report-interval: ${SERIALX_NAMESPACE_REPORT_INTERVAL:20s}
       status-ttl: ${SERIALX_NAMESPACE_STATUS_TTL:24h}
       instance-id: ${SERIALX_SERVICE_INSTANCE_ID:}
       advertised-ip: ${SERIALX_SERVICE_INSTANCE_IP:}

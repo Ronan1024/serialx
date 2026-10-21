@@ -18,6 +18,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties(AdminSecurityProperties.class)
 @SpringBootApplication(scanBasePackages = {
         "com.ronan.serialx.admin",
+        "com.ronan.serialx.coordinator",
+        "com.ronan.serialx.standalone.config",
         "com.ronan.serialx.api",
         "com.ronan.serialx.application",
         "com.ronan.serialx.adapter",

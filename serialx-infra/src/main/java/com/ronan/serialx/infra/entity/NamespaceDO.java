@@ -61,6 +61,6 @@ public class NamespaceDO extends BaseDO {
      * 删除标记。
      */
     @TableField(fill = FieldFill.INSERT)
-    private Integer deleted;
+    private Boolean deleted;
 
 }

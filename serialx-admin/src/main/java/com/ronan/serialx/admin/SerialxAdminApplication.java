@@ -8,7 +8,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 
 /**
- * SerialX 后台管理应用启动入口。
+ * SerialX 组合控制面启动入口，同时装配后台管理与 coordinator 协调能力。
+ * 协调器是库模块，不启动第二个必须部署的应用进程；HTTP 与 gRPC 共用同一权威主库。
  */
 @MapperScan("com.ronan.serialx.infra.mapper")
 @SpringBootApplication(scanBasePackages = "com.ronan.serialx")

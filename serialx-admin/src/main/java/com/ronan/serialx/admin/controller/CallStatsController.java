@@ -5,7 +5,6 @@ import java.time.Instant;
 import com.ronan.serialx.admin.dto.CallStatsQueryRequest;
 import com.ronan.serialx.admin.dto.CallStatsResponse;
 import com.ronan.serialx.admin.manager.CallStatsManager;
-import com.ronan.serialx.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.util.StringUtils;
@@ -28,7 +27,7 @@ public class CallStatsController {
      * 查询调用统计页面数据。
      */
     @GetMapping
-    public ApiResponse<CallStatsResponse> query(
+    public CallStatsResponse query(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
             @RequestParam(required = false) String namespaceCode,
@@ -42,7 +41,7 @@ public class CallStatsController {
         request.setInstanceId(normalize(instanceId));
         request.setClientId(normalize(clientId));
         request.setClientName(normalize(clientName));
-        return ApiResponse.success(callStatsManager.query(request));
+        return callStatsManager.query(request);
     }
 
     private String normalize(String value) {

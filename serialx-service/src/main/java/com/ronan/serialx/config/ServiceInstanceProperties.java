@@ -26,11 +26,6 @@ public class ServiceInstanceProperties {
     private Duration fullSyncInterval = Duration.ofSeconds(30);
 
     /**
-     * 实例状态上报间隔。
-     */
-    private Duration reportInterval = Duration.ofSeconds(20);
-
-    /**
      * 实例状态快照 Redis 保留时间。
      */
     private Duration statusTtl = Duration.ofHours(24);

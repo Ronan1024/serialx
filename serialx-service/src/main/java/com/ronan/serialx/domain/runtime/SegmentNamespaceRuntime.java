@@ -49,4 +49,8 @@ public class SegmentNamespaceRuntime implements NamespaceRuntime {
                 BusinessErrorCode.ID_GENERATE_FAILED.getCode(),
                 "Segment 发号需要数据库号段分配器，当前尚未启用，namespaceCode=" + namespaceCode);
     }
+
+    /** 号段分配尚未实现，不能将已加载占位对象展示为 ACTIVE。 */
+    @Override
+    public String getRuntimeStatus() { return "UNSUPPORTED"; }
 }

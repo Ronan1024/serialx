@@ -24,12 +24,15 @@ public class NamespaceFullSyncTask {
     @Scheduled(fixedDelayString = "#{@serviceInstanceProperties.fullSyncInterval.toMillis()}")
     public void fullSync() {
         if (!serviceInstanceProperties.isNamespaceRefreshEnabled()) {
+            log.debug("Namespace 定时全量对齐已禁用");
             return;
         }
         try {
+            log.debug("Namespace 定时全量对齐开始");
             namespaceRuntimeLoader.loadPublishedNamespaces();
+            log.debug("Namespace 定时全量对齐完成");
         } catch (Exception ex) {
-            log.warn("full sync namespace runtime failed", ex);
+            log.warn("Namespace 定时全量对齐失败，exceptionType={}", ex.getClass().getSimpleName());
         }
     }
 }

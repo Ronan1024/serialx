@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * 后台认证业务编排。
  */
@@ -50,18 +52,15 @@ public class AdminAuthManager {
     private final AdminSecurityProperties securityProperties;
 
     /**
-     * 使用用户名和密码登录并签发 JWT。
+     * 使用用户名和密码登录
      */
     public LoginResponse login(LoginRequest request) {
         AdminUserDO user = adminUserService.getByUsername(request.getUsername());
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw BizException.unauthorized(
-                    BusinessErrorCode.ADMIN_LOGIN_FAILED, BusinessErrorCode.ADMIN_LOGIN_FAILED.getMessage());
-        }
-        if (!AdminUserStatusEnum.isEnabled(user.getStatus())) {
-            throw BizException.forbidden(
-                    BusinessErrorCode.ADMIN_USER_DISABLED, BusinessErrorCode.ADMIN_USER_DISABLED.getMessage());
-        }
+        Assert.notNull(user, UnauthorizedException.supplier(BusinessErrorCode.ADMIN_LOGIN_FAILED));
+        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+        Assert.isTrue(matches, UnauthorizedException.supplier(BusinessErrorCode.ADMIN_LOGIN_FAILED));
+        Assert.isTrue(AdminUserStatusEnum.isEnabled(user.getStatus()), ForbiddenException.supplier(BusinessErrorCode.ADMIN_USER_DISABLED));
+
         adminUserService.updateLastLoginAt(user.getId());
         AdminUserPrincipal principal = new AdminUserPrincipal(user.getId(), user.getUsername(), user.getRoles());
         AdminUserResponse responseUser = adminUserManager.toResponse(adminUserService.getById(user.getId()));
@@ -78,10 +77,8 @@ public class AdminAuthManager {
      * 查询当前登录后台用户。
      */
     public AdminUserResponse currentUser(AdminUserPrincipal principal) {
-        if (principal == null) {
-            throw BizException.unauthorized(
-                    BusinessErrorCode.ADMIN_UNAUTHORIZED, BusinessErrorCode.ADMIN_UNAUTHORIZED.getMessage());
-        }
+
+        Assert.notNull(principal, UnauthorizedException.supplier(BusinessErrorCode.ADMIN_UNAUTHORIZED));
         return adminUserManager.getUser(principal.getUserId());
     }
 }

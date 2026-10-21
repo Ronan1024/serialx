@@ -5,7 +5,6 @@ import com.ronan.serialx.api.dto.IdBatchGenerateResponse;
 import com.ronan.serialx.api.dto.IdGenerateRequest;
 import com.ronan.serialx.api.dto.IdGenerateResponse;
 import com.ronan.serialx.application.generate.IdGenerateManager;
-import com.ronan.serialx.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,15 +26,15 @@ public class AdminIdTestController {
      * 测试生成单个 ID。
      */
     @PostMapping("/next")
-    public ApiResponse<IdGenerateResponse> nextId(@Valid @RequestBody IdGenerateRequest request) {
-        return ApiResponse.success(idGenerateManager.nextId(request.getNamespaceCode()));
+    public IdGenerateResponse nextId(@Valid @RequestBody IdGenerateRequest request) {
+        return idGenerateManager.nextId(request.getNamespaceCode());
     }
 
     /**
      * 测试批量生成 ID。
      */
     @PostMapping("/batch")
-    public ApiResponse<IdBatchGenerateResponse> batchNextId(@Valid @RequestBody IdBatchGenerateRequest request) {
-        return ApiResponse.success(idGenerateManager.batchNextId(request.getNamespaceCode(), request.getCount()));
+    public IdBatchGenerateResponse batchNextId(@Valid @RequestBody IdBatchGenerateRequest request) {
+        return idGenerateManager.batchNextId(request.getNamespaceCode(), request.getCount());
     }
 }

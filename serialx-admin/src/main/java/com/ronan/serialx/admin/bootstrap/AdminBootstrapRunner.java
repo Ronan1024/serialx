@@ -2,6 +2,7 @@ package com.ronan.serialx.admin.bootstrap;
 
 import com.ronan.serialx.admin.config.AdminSecurityProperties;
 import com.ronan.serialx.admin.service.AdminUserService;
+import com.ronan.serialx.common.enums.AdminUserRoleEnum;
 import com.ronan.serialx.common.enums.AdminUserStatusEnum;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         user.setPasswordHash(passwordEncoder.encode(properties.getBootstrapPassword()));
         user.setDisplayName(properties.getBootstrapUsername());
         user.setStatus(AdminUserStatusEnum.ENABLED.getCode());
-        user.setRoles("ADMIN");
+        user.setRoles(AdminUserRoleEnum.ADMIN.getCode());
         adminUserService.create(user);
     }
 }

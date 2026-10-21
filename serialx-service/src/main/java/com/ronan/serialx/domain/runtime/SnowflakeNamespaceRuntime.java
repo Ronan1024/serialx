@@ -1,47 +1,22 @@
 package com.ronan.serialx.domain.runtime;
 
+import com.ronan.serialx.core.snowflake.SnowflakeGenerator;
+import java.util.Objects;
+
 /**
- * Snowflake 模式本地运行时。
+ * Snowflake Namespace 包装，只保存路由及版本，不持有独立发号序列。
  */
 public class SnowflakeNamespaceRuntime implements NamespaceRuntime {
-
-    /**
-     * 默认起始时间戳，2024-01-01 00:00:00 UTC。
-     */
-    private static final long DEFAULT_EPOCH = 1704067200000L;
-
     private final String namespaceCode;
-
     private final Integer version;
-
     private final Integer idMode;
+    private final SnowflakeGenerator generator;
 
-    private final long workerId;
-
-    private final long datacenterId;
-
-    private final long workerIdShift;
-
-    private final long datacenterIdShift;
-
-    private final long timestampLeftShift;
-
-    private final long sequenceMask;
-
-    private long sequence;
-
-    private long lastTimestamp = -1L;
-
-    public SnowflakeNamespaceRuntime(String namespaceCode, Integer version, Integer idMode, long workerId, long datacenterId, long workerIdBits, long datacenterIdBits, long sequenceBits) {
+    public SnowflakeNamespaceRuntime(String namespaceCode, Integer version, Integer idMode, SnowflakeGenerator generator) {
         this.namespaceCode = namespaceCode;
         this.version = version;
         this.idMode = idMode;
-        this.workerId = workerId;
-        this.datacenterId = datacenterId;
-        this.workerIdShift = sequenceBits;
-        this.datacenterIdShift = sequenceBits + workerIdBits;
-        this.timestampLeftShift = sequenceBits + workerIdBits + datacenterIdBits;
-        this.sequenceMask = ~(-1L << sequenceBits);
+        this.generator = Objects.requireNonNull(generator);
     }
 
     @Override
@@ -60,35 +35,12 @@ public class SnowflakeNamespaceRuntime implements NamespaceRuntime {
     }
 
     @Override
-    public synchronized long nextId() {
-        long timestamp = currentTimeMillis();
-        if (timestamp < lastTimestamp) {
-            throw new IllegalStateException("clock moved backwards, namespaceCode=" + namespaceCode);
-        }
-        if (timestamp == lastTimestamp) {
-            sequence = (sequence + 1) & sequenceMask;
-            if (sequence == 0) {
-                timestamp = waitNextMillis(lastTimestamp);
-            }
-        } else {
-            sequence = 0L;
-        }
-        lastTimestamp = timestamp;
-        return ((timestamp - DEFAULT_EPOCH) << timestampLeftShift)
-                | (datacenterId << datacenterIdShift)
-                | (workerId << workerIdShift)
-                | sequence;
+    public long nextId() {
+        return generator.nextId();
     }
 
-    private long waitNextMillis(long lastTimestampValue) {
-        long timestamp = currentTimeMillis();
-        while (timestamp <= lastTimestampValue) {
-            timestamp = currentTimeMillis();
-        }
-        return timestamp;
-    }
-
-    private long currentTimeMillis() {
-        return System.currentTimeMillis();
+    @Override
+    public boolean isAvailable() {
+        return generator.isAvailable();
     }
 }

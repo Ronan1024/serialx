@@ -1,11 +1,11 @@
 package com.ronan.serialx.admin.controller;
 
 import com.ronan.serialx.admin.dto.AppCreateRequest;
+import com.ronan.serialx.admin.dto.AppPageQueryRequest;
 import com.ronan.serialx.admin.dto.AppResponse;
 import com.ronan.serialx.admin.dto.AppSecretResetRequest;
 import com.ronan.serialx.admin.dto.AppUpdateRequest;
 import com.ronan.serialx.admin.manager.AppManager;
-import com.ronan.serialx.common.response.ApiResponse;
 import com.ronan.serialx.common.response.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -34,47 +33,43 @@ public class AppController {
     /**
      * 分页查询应用。
      */
-    @GetMapping
-    public ApiResponse<PageResult<AppResponse>> pageApps(
-            @RequestParam(defaultValue = "1") long pageNo,
-            @RequestParam(defaultValue = "20") long pageSize,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer status) {
-        return ApiResponse.success(appManager.pageApps(pageNo, pageSize, keyword, status));
+    @PostMapping("/page")
+    public PageResult<AppResponse> pageApps(@RequestBody AppPageQueryRequest request) {
+        return appManager.pageApps(
+                request.getPageNo(), request.getPageSize(), request.getKeyword(), request.getStatus());
     }
 
     /**
      * 查询应用详情。
      */
     @GetMapping("/{id}")
-    public ApiResponse<AppResponse> getApp(@PathVariable Long id) {
-        return ApiResponse.success(appManager.getApp(id));
+    public AppResponse getApp(@PathVariable Long id) {
+        return appManager.getApp(id);
     }
 
     /**
      * 创建应用。
      */
     @PostMapping
-    public ApiResponse<AppResponse> createApp(@Valid @RequestBody AppCreateRequest request) {
-        return ApiResponse.success(appManager.createApp(request));
+    public AppResponse createApp(@Valid @RequestBody AppCreateRequest request) {
+        return appManager.createApp(request);
     }
 
     /**
      * 更新应用基础信息。
      */
     @PutMapping("/{id}")
-    public ApiResponse<AppResponse> updateApp(
+    public AppResponse updateApp(
             @PathVariable Long id, @Valid @RequestBody AppUpdateRequest request) {
-        return ApiResponse.success(appManager.updateApp(id, request));
+        return appManager.updateApp(id, request);
     }
 
     /**
      * 重置应用密钥。
      */
     @PutMapping("/{id}/secret")
-    public ApiResponse<Void> resetSecret(
+    public void resetSecret(
             @PathVariable Long id, @Valid @RequestBody AppSecretResetRequest request) {
         appManager.resetSecret(id, request);
-        return ApiResponse.success();
     }
 }

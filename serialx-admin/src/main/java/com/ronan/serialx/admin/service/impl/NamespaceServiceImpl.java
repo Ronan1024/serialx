@@ -57,18 +57,19 @@ public class NamespaceServiceImpl implements NamespaceService {
                 .eq(NamespaceDO::getDeleted, 0)) > 0;
     }
 
+    /**
+     * 分页查询未逻辑删除的 Namespace 主记录，按主键倒序返回。
+     */
     @Override
     public Page<NamespaceDO> pageNamespaces(long pageNo, long pageSize, String keyword, Integer status, Integer idMode) {
         LambdaQueryWrapper<NamespaceDO> wrapper = new LambdaQueryWrapper<NamespaceDO>()
-                .eq(NamespaceDO::getDeleted, 0)
+                .eq(NamespaceDO::getDeleted, Boolean.FALSE)
                 .eq(status != null, NamespaceDO::getStatus, status)
                 .eq(idMode != null, NamespaceDO::getIdMode, idMode)
                 .and(StringUtils.hasText(keyword), query -> query
                         .like(NamespaceDO::getNamespaceCode, keyword)
-                        .or()
-                        .like(NamespaceDO::getNamespaceName, keyword)
-                        .or()
-                        .like(NamespaceDO::getOwner, keyword))
+                        .or().like(NamespaceDO::getNamespaceName, keyword)
+                        .or().like(NamespaceDO::getOwner, keyword))
                 .orderByDesc(NamespaceDO::getId);
         return namespaceMapper.selectPage(Page.of(pageNo, pageSize), wrapper);
     }

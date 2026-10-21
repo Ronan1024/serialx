@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package serialx.coordination.v1;
+option java_package = "com.ronan.serialx.protocol.coordination.v1";
+option java_multiple_files = true;
+option java_outer_classname = "SerialxCoordinationProtocol";
+
+// R1 只提供旧雪花租约能力；generation/上报/配置/取段/路由由后续阶段实现。
+// 不能把未设置 generation 或 UNIMPLEMENTED 当成完整服务会话已经建立。
+service Coordinator {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Renew(RenewRequest) returns (RenewResponse);
+  rpc Report(ReportRequest) returns (ReportResponse);
+  rpc Release(ReleaseRequest) returns (ReleaseResponse);
+  rpc AllocateSegment(AllocateSegmentRequest) returns (AllocateSegmentResponse);
+  rpc GetNamespaceConfig(GetNamespaceConfigRequest) returns (GetNamespaceConfigResponse);
+  rpc GetRoutes(GetRoutesRequest) returns (RoutesResponse);
+  rpc WatchRoutes(WatchRoutesRequest) returns (stream RoutesResponse);
+}
+
+message RequestMetadata {
+  uint32 protocol_version = 1;
+  string request_id = 2; // 小写标准 UUID；R1 仅校验格式，不持久化 Renew 幂等结果。
+  string allocation_domain = 3;
+}
+message SessionIdentity {
+  string instance_id = 1;
+  string runtime_id = 2;
+  optional uint64 generation = 3; // R1 必须缺省，不能以 0 伪造已分配的代数。
+}
+message SnowflakeResourceIdentity {
+  optional uint32 datacenter_id = 1;
+  optional uint32 worker_id = 2;
+}
+message SnowflakeLease {
+  uint32 node_id = 1;
+  uint32 datacenter_id = 2;
+  uint32 worker_id = 3;
+  int64 valid_from_ms = 4;
+  int64 reserved_until_ms = 5;
+  int64 lease_expire_at_ms = 6;
+  int64 remaining_lease_ms = 7;
+  int64 epoch = 8;
+  uint32 datacenter_id_bits = 9;
+  uint32 worker_id_bits = 10;
+  uint32 sequence_bits = 11;
+}
+enum ResourceRequirement {
+  RESOURCE_REQUIREMENT_UNSPECIFIED = 0;
+  SNOWFLAKE = 1;
+  SEGMENT = 2;
+}
+enum CoordinationCapability {
+  COORDINATION_CAPABILITY_UNSPECIFIED = 0;
+  LEGACY_SNOWFLAKE_LEASE = 1;
+  FENCED_SERVICE_SESSION = 2;
+}
+message ServiceEndpoint { string uri = 1; }
+message RegisterRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  repeated ResourceRequirement resources = 3;
+  repeated ServiceEndpoint endpoints = 4;
+}
+message RegisterResponse {
+  SessionIdentity session = 1;
+  SnowflakeLease snowflake_lease = 2;
+  repeated CoordinationCapability capabilities = 3;
+  string recovery_epoch = 4;
+}
+message RenewRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  SnowflakeResourceIdentity snowflake = 3;
+}
+message RenewResponse {
+  SessionIdentity session = 1;
+  SnowflakeLease snowflake_lease = 2;
+}
+message ReleaseRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  SnowflakeResourceIdentity snowflake = 3;
+}
+message ReleaseResponse { bool released = 1; }
+message NamespaceCapability {
+  string namespace_code = 1;
+  int64 config_version = 2;
+  string runtime_status = 3;
+}
+message ReportRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  uint64 report_seq = 3;
+  string process_status = 4;
+  repeated NamespaceCapability namespaces = 5;
+}
+message ReportResponse {
+  uint64 accepted_seq = 1;
+  bool accepted = 2;
+  bool duplicate = 3;
+  int64 received_at_ms = 4;
+}
+message AllocateSegmentRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  string namespace_code = 3;
+  int64 config_version = 4;
+  string allocation_request_id = 5;
+}
+message AllocateSegmentResponse {
+  string allocation_id = 1;
+  int64 start_inclusive = 2;
+  int64 end_inclusive = 3;
+  int64 config_version = 4;
+}
+message GetNamespaceConfigRequest {
+  RequestMetadata metadata = 1;
+  SessionIdentity session = 2;
+  string namespace_code = 3;
+  int64 known_version = 4;
+}
+message GetNamespaceConfigResponse {
+  string namespace_code = 1;
+  int64 config_version = 2;
+  bool enabled = 3;
+  bool not_modified = 4;
+  bytes config_json = 5; // 配置快照不得包含 AppSecret 或机器凭证。
+}
+message GetRoutesRequest {
+  RequestMetadata metadata = 1;
+  string namespace_code = 2;
+  string known_epoch = 3;
+  uint64 known_revision = 4;
+}
+message WatchRoutesRequest {
+  RequestMetadata metadata = 1;
+  repeated string namespace_codes = 2;
+  string known_epoch = 3;
+  uint64 known_revision = 4;
+}
+message RouteCandidate {
+  SessionIdentity session = 1;
+  repeated ServiceEndpoint endpoints = 2;
+  int64 config_version = 3;
+}
+message RoutesResponse {
+  string namespace_code = 1;
+  string epoch = 2;
+  uint64 revision = 3;
+  int64 cache_ttl_ms = 4;
+  bool not_modified = 5;
+  bool full_snapshot = 6;
+  bool resync_required = 7;
+  repeated RouteCandidate candidates = 8;
+}

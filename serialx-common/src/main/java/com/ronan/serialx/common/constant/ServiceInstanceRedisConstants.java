@@ -34,38 +34,4 @@ public final class ServiceInstanceRedisConstants {
     private ServiceInstanceRedisConstants() {
     }
 
-    /**
-     * Redis Hash 字段名。
-     */
-    public static final class Fields {
-
-        public static final String INSTANCE_ID = "instanceId";
-
-        public static final String RUNTIME_ID = "runtimeId";
-
-        public static final String HOST_NAME = "hostName";
-
-        public static final String HOST = "host";
-
-        public static final String IP = "ip";
-
-        public static final String PORT = "port";
-
-        public static final String STATUS = "status";
-
-        public static final String NAMESPACE_CODE = "namespaceCode";
-
-        public static final String LOADED_VERSION = "loadedVersion";
-
-        public static final String RUNTIME_STATUS = "runtimeStatus";
-
-        public static final String CREATE_TIME = "createTime";
-
-        public static final String LAST_REPORT_TIME = "lastReportTime";
-
-        public static final String LAST_OFFLINE_TIME = "lastOfflineTime";
-
-        private Fields() {
-        }
-    }
 }

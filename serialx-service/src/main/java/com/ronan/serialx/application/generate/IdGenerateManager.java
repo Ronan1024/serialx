@@ -8,7 +8,6 @@ import com.ronan.serialx.api.dto.IdGenerateResponse;
 import com.ronan.serialx.api.dto.NamespaceRuntimeStatusResponse;
 import com.ronan.serialx.application.stats.CallStatsRecord;
 import com.ronan.serialx.application.stats.CallStatsRecorder;
-import com.ronan.serialx.common.constant.ServiceInstanceRedisConstants;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.BizException;
 import com.ronan.serialx.domain.registry.NamespaceRegistry;
@@ -91,7 +90,7 @@ public class IdGenerateManager {
                 .namespaceCode(namespaceCode)
                 .version(runtime.getVersion())
                 .idMode(runtime.getIdMode())
-                .runtimeStatus(ServiceInstanceRedisConstants.ACTIVE)
+                .runtimeStatus(runtime.getRuntimeStatus())
                 .build();
     }
 

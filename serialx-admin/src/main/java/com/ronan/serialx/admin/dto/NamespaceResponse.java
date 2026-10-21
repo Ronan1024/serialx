@@ -8,7 +8,9 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * Namespace 响应对象。
+ * Namespace 列表、详情及管理操作共用的控制面响应。
+ *
+ * <p>主记录信息、草稿和已发布配置分别表达管理侧状态，不能据此判断 service 实例已加载相应版本。
  */
 @Getter
 @Builder
@@ -30,22 +32,22 @@ public class NamespaceResponse {
     private String namespaceName;
 
     /**
-     * 发号模式编码。
+     * 主记录的发号模式：1 Segment、2 Snowflake；可能与尚未重新发布的历史配置不同。
      */
     private Integer idMode;
 
     /**
-     * 发号模式名称。
+     * 主记录对应的模式名称，未知编码时为 null。
      */
     private String idModeName;
 
     /**
-     * Namespace 状态编码。
+     * 管理侧状态：0 草稿、1 已启用、2 已停用，不表示 service 实例健康状态。
      */
     private Integer status;
 
     /**
-     * Namespace 状态名称。
+     * 管理侧状态名称，未知编码时为 null。
      */
     private String statusName;
 
@@ -60,17 +62,18 @@ public class NamespaceResponse {
     private String remark;
 
     /**
-     * 当前生效版本。
+     * 控制面当前指向的发布版本，未发布时为 0；回滚后可小于历史最大版本。
      */
     private Integer currentVersion;
 
     /**
-     * 当前草稿配置。
+     * 最新 EDITING 记录的配置内容，无草稿时为 null；保存草稿本身不会使其成为已发布配置。
      */
     private JsonNode draftConfig;
 
     /**
-     * 当前生效配置。
+     * currentVersion 对应的已发布配置，未发布或对应记录缺失时为 null。
+     * 不代表所有 service 实例已完成同步，停用时也可保留此配置供管理端查看。
      */
     private JsonNode publishedConfig;
 

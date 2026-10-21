@@ -20,6 +20,12 @@ public interface NamespaceRuntime {
      */
     Integer getIdMode();
 
+    /** 是否具备实时发号能力；仅加载配置不代表可用。 */
+    default boolean isAvailable() { return false; }
+
+    /** 控制面展示状态，区分已加载与实时可发号。 */
+    default String getRuntimeStatus() { return isAvailable() ? "ACTIVE" : "LOADED"; }
+
     /**
      * 生成下一个 ID。
      */

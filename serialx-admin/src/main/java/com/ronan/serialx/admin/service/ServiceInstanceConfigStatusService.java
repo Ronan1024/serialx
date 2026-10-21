@@ -15,6 +15,12 @@ public interface ServiceInstanceConfigStatusService {
     List<ServiceInstanceConfigStatusDO> listAll();
 
     /**
+     * 获取全部实例指定状态的全部节点
+     */
+    List<ServiceInstanceConfigStatusDO> listByActive(Boolean active);
+
+
+    /**
      * 按 Namespace 编码查询实例状态。
      */
     List<ServiceInstanceConfigStatusDO> listByNamespaceCode(String namespaceCode);

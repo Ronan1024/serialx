@@ -1,6 +1,8 @@
 package com.ronan.serialx.admin.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ronan.serialx.admin.dto.AdminUserCreateRequest;
+import com.ronan.serialx.admin.dto.AdminUserResponse;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 
 /**
@@ -52,4 +54,6 @@ public interface AdminUserService {
      * 删除后台用户。
      */
     void deleteById(Long id);
+
+
 }

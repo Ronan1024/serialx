@@ -2,6 +2,7 @@ package com.ronan.serialx.admin.dto;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -35,5 +36,6 @@ public class LoginResponse {
     /**
      * 登录时间。
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime loginAt;
 }

@@ -41,14 +41,9 @@ public class ServiceInstanceNodeManager {
      * 查询 Service 节点列表。
      */
     public ServiceInstanceNodeListResponse listNodes() {
-        List<ServiceInstanceConfigStatusDO> statuses = serviceInstanceConfigStatusService.listAll().stream()
-                .filter(this::isVisibleStatus)
-                .toList();
+        List<ServiceInstanceConfigStatusDO> statuses = serviceInstanceConfigStatusService.listAll().stream().filter(this::isVisibleStatus).toList();
         Map<String, NamespaceDO> namespaceMap = namespaceService.listByCodes(statuses.stream()
-                        .map(ServiceInstanceConfigStatusDO::getNamespaceCode)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet()))
-                .stream()
+                        .map(ServiceInstanceConfigStatusDO::getNamespaceCode).filter(Objects::nonNull).collect(Collectors.toSet())).stream()
                 .collect(Collectors.toMap(NamespaceDO::getNamespaceCode, Function.identity(), (left, right) -> left));
         List<ServiceInstanceNodeResponse> nodes = statuses.stream()
                 .collect(Collectors.groupingBy(this::buildNodeKey))

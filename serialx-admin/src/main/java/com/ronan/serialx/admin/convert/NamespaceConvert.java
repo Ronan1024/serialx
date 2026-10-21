@@ -22,7 +22,15 @@ public interface NamespaceConvert {
     NamespaceConvert INSTANCE = Mappers.getMapper(NamespaceConvert.class);
 
     /**
-     * 将 Namespace 持久化对象转换为响应对象。
+     * 将主记录与已解析的配置映射为管理端响应，不在转换层查询或解析配置。
+     *
+     * <p>模式与状态名称由主记录编码推导，未知编码保留原值、名称返回 null；
+     * 草稿与发布配置各自映射，不使用其中一项替代另一项。
+     *
+     * @param namespace Namespace 主记录
+     * @param draftConfig 最新编辑态配置，缺失时为 null
+     * @param publishedConfig currentVersion 对应的已发布配置，缺失时为 null
+     * @return 包含基础信息、枚举名称及两类配置的响应对象
      */
     @Mapping(
             target = "idModeName",
@@ -71,4 +79,10 @@ public interface NamespaceConvert {
     @Mapping(target = "publishedAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "publishedBy", ignore = true)
     NamespaceConfigDO toNamespaceConfigDO(Long id, int nextVersion, NamespaceConfigDO editingConfig);
+
+    @Mapping(target = "statusName", ignore = true)
+    @Mapping(target = "publishedConfig", ignore = true)
+    @Mapping(target = "idModeName", ignore = true)
+    @Mapping(target = "draftConfig", ignore = true)
+    NamespaceResponse toNamespaceResponse(NamespaceDO namespaceDO);
 }

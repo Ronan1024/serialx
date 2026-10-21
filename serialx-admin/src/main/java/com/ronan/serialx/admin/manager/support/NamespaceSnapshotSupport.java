@@ -62,7 +62,14 @@ public class NamespaceSnapshotSupport {
     }
 
     /**
-     * 将 JSON 字符串解析为节点。
+     * 解析配置 JSON，供管理响应与审计快照共用。
+     *
+     * <p>解析失败不降级为空配置，避免掩盖持久化内容异常；仅需忽略空白输入时使用
+     * {@link #readJsonSafely(String)}。
+     *
+     * @param json 待解析的配置 JSON 文本
+     * @return ObjectMapper 解析得到的 JSON 节点
+     * @throws BizException 解析失败，错误码为 NAMESPACE_CONFIG_INVALID
      */
     public JsonNode readJson(String json) {
         try {

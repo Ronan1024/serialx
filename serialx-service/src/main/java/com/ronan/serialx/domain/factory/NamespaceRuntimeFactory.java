@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.ronan.serialx.common.enums.NamespaceIdModeEnum;
 import com.ronan.serialx.common.error.BusinessErrorCode;
 import com.ronan.serialx.common.exception.BizException;
-import com.ronan.serialx.config.SnowflakeNodeProperties;
+import com.ronan.serialx.core.snowflake.SnowflakeGenerator;
 import com.ronan.serialx.domain.model.NamespaceRuntimeSnapshot;
 import com.ronan.serialx.domain.runtime.NamespaceRuntime;
 import com.ronan.serialx.domain.runtime.SegmentNamespaceRuntime;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NamespaceRuntimeFactory {
 
-    private final SnowflakeNodeProperties snowflakeNodeProperties;
+    private final SnowflakeGenerator snowflakeGenerator;
 
     /**
      * 创建 Namespace 运行时。
@@ -52,11 +52,7 @@ public class NamespaceRuntimeFactory {
                 snapshot.getNamespaceCode(),
                 snapshot.getVersion(),
                 snapshot.getIdMode(),
-                snowflakeNodeProperties.getWorkerId(),
-                snowflakeNodeProperties.getDatacenterId(),
-                snowflakeNodeProperties.getWorkerIdBits(),
-                snowflakeNodeProperties.getDatacenterIdBits(),
-                snowflakeNodeProperties.getSequenceBits());
+                snowflakeGenerator);
     }
 
     private long readRequiredLong(JsonNode config, String fieldName, String namespaceCode) {

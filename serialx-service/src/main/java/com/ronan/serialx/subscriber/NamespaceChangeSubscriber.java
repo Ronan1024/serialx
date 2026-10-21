@@ -6,7 +6,6 @@ import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ronan.serialx.application.refresh.NamespaceRuntimeLoader;
-import com.ronan.serialx.common.constant.ServiceInstanceRedisConstants;
 import com.ronan.serialx.common.model.NamespaceChangeMessage;
 import com.ronan.serialx.config.ServiceInstanceProperties;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +24,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class NamespaceChangeSubscriber implements MessageListener {
 
-    private static final Set<String> REFRESH_EVENTS = Set.of("PUBLISH", "ENABLE", "ROLLBACK");
-
-    private static final String DISABLE_EVENT = "DISABLE";
-
-    private static final String DELETE_EVENT = "DELETE";
+    private static final Set<String> REFRESH_EVENTS = Set.of("PUBLISH", "ENABLE", "ROLLBACK", "DISABLE", "DELETE");
 
     private final ObjectMapper objectMapper;
 
@@ -43,44 +38,45 @@ public class NamespaceChangeSubscriber implements MessageListener {
     @EventListener
     public void onLocalNamespaceChange(NamespaceChangeMessage message) {
         if (!serviceInstanceProperties.isNamespaceRefreshEnabled()) {
+            log.debug("Namespace 变更接收已禁用，source=LOCAL");
             return;
         }
+        log.debug("收到本地 Namespace 变更");
         handleChangeMessage(message);
     }
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
         if (!serviceInstanceProperties.isNamespaceRefreshEnabled()) {
+            log.debug("Namespace 变更接收已禁用，source=REDIS");
             return;
         }
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
+        log.debug("收到 Redis Namespace 变更，payloadBytes={}", message.getBody().length);
         try {
             NamespaceChangeMessage changeMessage = objectMapper.readValue(body, NamespaceChangeMessage.class);
             handleChangeMessage(changeMessage);
         } catch (Exception ex) {
-            log.warn("handle namespace change message failed, message={}", body, ex);
+            // 消息正文和解析异常均可能含配置或凭证，不写入日志。
+            log.warn("Namespace 变更处理失败，payloadBytes={}, exceptionType={}", message.getBody().length, ex.getClass().getSimpleName());
         }
     }
 
     private void handleChangeMessage(NamespaceChangeMessage message) {
         if (message == null || !StringUtils.hasText(message.getNamespaceCode())) {
+            log.debug("忽略缺少 Namespace 标识的变更");
             return;
         }
         String eventType = normalizeEventType(message.getEventType());
         if (REFRESH_EVENTS.contains(eventType)) {
+            log.debug("Namespace 变更处理开始，namespaceCode={}, version={}, eventType={}",
+                    message.getNamespaceCode(), message.getVersion(), eventType);
             namespaceRuntimeLoader.refresh(message.getNamespaceCode(), message.getVersion());
+            log.debug("Namespace 变更处理完成，namespaceCode={}, version={}, eventType={}",
+                    message.getNamespaceCode(), message.getVersion(), eventType);
             return;
         }
-        if (DISABLE_EVENT.equals(eventType)) {
-            namespaceRuntimeLoader.remove(message.getNamespaceCode(), ServiceInstanceRedisConstants.DISABLED);
-            return;
-        }
-        if (DELETE_EVENT.equals(eventType)) {
-            namespaceRuntimeLoader.remove(message.getNamespaceCode(), ServiceInstanceRedisConstants.OFFLINE);
-            return;
-        }
-        log.warn("unsupported namespace change event, namespaceCode={}, eventType={}",
-                message.getNamespaceCode(), message.getEventType());
+        log.warn("不支持的 Namespace 变更事件，namespaceCode={}, version={}", message.getNamespaceCode(), message.getVersion());
     }
 
     private String normalizeEventType(String eventType) {

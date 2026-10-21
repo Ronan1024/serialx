@@ -15,6 +15,15 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ServiceInstanceIdentity {
 
+    /**
+     * 本次进程启动唯一标识，由节点租约和 Redis 上报共同使用。
+     */
+    private final String runtimeId = java.util.UUID.randomUUID().toString();
+
+    public String getRuntimeId() {
+        return runtimeId;
+    }
+
     private static final String DEFAULT_INSTANCE_ID_PREFIX = "serialx-service-";
 
     private final ServiceInstanceProperties serviceInstanceProperties;
@@ -61,11 +70,12 @@ public class ServiceInstanceIdentity {
      * 获取当前服务端口。
      */
     public String getPort() {
-        if (StringUtils.hasText(port)) {
+        if (StringUtils.hasText(port) && !"0".equals(port)) {
             return port;
         }
         synchronized (this) {
-            if (!StringUtils.hasText(port)) {
+            // 随机端口在注册时尚未绑定，不能让配置值 0 永久覆盖实际监听端口。
+            if (!StringUtils.hasText(port) || "0".equals(port)) {
                 port = resolvePort();
             }
             return port;
@@ -83,7 +93,10 @@ public class ServiceInstanceIdentity {
         if (StringUtils.hasText(serviceInstanceProperties.getInstanceId())) {
             return serviceInstanceProperties.getInstanceId().trim();
         }
-        return DEFAULT_INSTANCE_ID_PREFIX + normalizeInstanceIdPart(getIp() + "-" + getPort());
+        String currentPort = getPort();
+        // 随机端口启动前无法用于区分实例，追加本次启动 UUID；之后展示身份保持稳定。
+        return DEFAULT_INSTANCE_ID_PREFIX + normalizeInstanceIdPart(getIp() + "-" + currentPort
+                + ("0".equals(currentPort) ? "-" + runtimeId : ""));
     }
 
     private String resolveInstanceIp() {

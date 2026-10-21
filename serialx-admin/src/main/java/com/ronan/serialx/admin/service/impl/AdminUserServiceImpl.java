@@ -5,6 +5,10 @@ import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ronan.serialx.admin.convert.AdminUserConvert;
+import com.ronan.serialx.admin.dto.AdminUserCreateRequest;
+import com.ronan.serialx.admin.dto.AdminUserResponse;
+import com.ronan.serialx.admin.manager.AdminUserManager;
 import com.ronan.serialx.admin.service.AdminUserService;
 import com.ronan.serialx.infra.entity.AdminUserDO;
 import com.ronan.serialx.infra.mapper.AdminUserMapper;
@@ -19,9 +23,6 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AdminUserServiceImpl implements AdminUserService {
 
-    /**
-     * 后台用户 Mapper。
-     */
     private final AdminUserMapper adminUserMapper;
 
     /**
@@ -113,4 +114,5 @@ public class AdminUserServiceImpl implements AdminUserService {
     public void deleteById(Long id) {
         adminUserMapper.deleteById(id);
     }
+
 }

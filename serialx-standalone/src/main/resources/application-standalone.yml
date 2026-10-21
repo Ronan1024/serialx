@@ -26,7 +26,16 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 serialx:
+  outbound:
+    http:
+      connect-timeout: ${SERIALX_HTTP_CONNECT_TIMEOUT:${SERIALX_NODE_CONNECT_TIMEOUT:1s}}
+      request-timeout: ${SERIALX_HTTP_REQUEST_TIMEOUT:${SERIALX_NODE_REQUEST_TIMEOUT:2s}}
   admin:
+    node-allocation:
+      machine-token: ${SERIALX_SERVICE_NODE_TOKEN:}
+      legacy-http-enabled: ${SERIALX_LEGACY_NODE_HTTP_ENABLED:true}
+      legacy-http-until: ${SERIALX_LEGACY_NODE_HTTP_UNTIL:2027-01-01T00:00:00Z}
+      reserved-window: ${SERIALX_NODE_RESERVED_WINDOW:60s}
     security:
       jwt-secret: ${SERIALX_ADMIN_JWT_SECRET}
       jwt-issuer: ${SERIALX_ADMIN_JWT_ISSUER:serialx}
@@ -45,15 +54,13 @@ serialx:
       flush-interval: ${SERIALX_CALL_STATS_FLUSH_INTERVAL:10s}
       max-qps: ${SERIALX_SERVICE_MAX_QPS:0}
     snowflake:
-      worker-id: ${SERIALX_SNOWFLAKE_WORKER_ID:0}
-      datacenter-id: ${SERIALX_SNOWFLAKE_DATACENTER_ID:0}
-      worker-id-bits: ${SERIALX_SNOWFLAKE_WORKER_ID_BITS:5}
-      datacenter-id-bits: ${SERIALX_SNOWFLAKE_DATACENTER_ID_BITS:5}
-      sequence-bits: ${SERIALX_SNOWFLAKE_SEQUENCE_BITS:12}
+      # 节点身份及固定 5/5/12 布局由租约返回，不接受人工节点编号。
+      admin-url: ${SERIALX_ADMIN_URL:http://localhost:8080}
+      machine-token: ${SERIALX_SERVICE_NODE_TOKEN}
+      startup-attempts: ${SERIALX_NODE_STARTUP_ATTEMPTS:3}
     instance:
       channel: ${SERIALX_NAMESPACE_CHANGE_CHANNEL:serialx:namespace:change}
       full-sync-interval: ${SERIALX_NAMESPACE_FULL_SYNC_INTERVAL:30s}
-      report-interval: ${SERIALX_NAMESPACE_REPORT_INTERVAL:20s}
       status-ttl: ${SERIALX_NAMESPACE_STATUS_TTL:24h}
       instance-id: ${SERIALX_SERVICE_INSTANCE_ID:}
       advertised-ip: ${SERIALX_SERVICE_INSTANCE_IP:}

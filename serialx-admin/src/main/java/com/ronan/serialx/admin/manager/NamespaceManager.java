@@ -1,18 +1,14 @@
 package com.ronan.serialx.admin.manager;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ronan.serialx.admin.convert.NamespaceConvert;
-import com.ronan.serialx.admin.dto.NamespaceChangeLogResponse;
-import com.ronan.serialx.admin.dto.NamespaceCreateRequest;
-import com.ronan.serialx.admin.dto.NamespaceDraftConfigRequest;
-import com.ronan.serialx.admin.dto.NamespaceResponse;
-import com.ronan.serialx.admin.dto.NamespaceUpdateRequest;
-import com.ronan.serialx.admin.dto.NamespaceVersionResponse;
-import com.ronan.serialx.admin.dto.ServiceInstanceConfigStatusResponse;
+import com.ronan.serialx.admin.dto.*;
 import com.ronan.serialx.admin.manager.support.config.NamespaceConfigHandlerRegistry;
 import com.ronan.serialx.admin.manager.support.NamespaceRequestValidator;
 import com.ronan.serialx.admin.manager.support.NamespaceSnapshotSupport;
@@ -50,29 +46,16 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class NamespaceManager {
 
-    /**
-     * Namespace 数据访问服务。
-     */
     private final NamespaceService namespaceService;
 
-    /**
-     * Namespace 配置数据访问服务。
-     */
+
     private final NamespaceConfigService namespaceConfigService;
 
-    /**
-     * Namespace 变更日志服务。
-     */
     private final NamespaceChangeLogService namespaceChangeLogService;
 
-    /**
-     * Service 实例配置状态服务。
-     */
+
     private final ServiceInstanceConfigStatusService serviceInstanceConfigStatusService;
 
-    /**
-     * Namespace 变更通知发布器。
-     */
     private final NamespaceChangePublisher namespaceChangePublisher;
 
     /**
@@ -91,16 +74,17 @@ public class NamespaceManager {
     private final NamespaceConfigHandlerRegistry namespaceConfigHandlerRegistry;
 
     /**
-     * 分页查询 Namespace。
+     * 查询 Namespace 管理列表，并为当前页记录补齐草稿与当前发布配置。
+     *
+     * <p>分页总数沿用主记录查询结果，不以当前页条数代替；配置装配不改变分页顺序。
+     * 本方法为只读编排，不发布配置，也不探测 service 实例是否已同步。
+     *
+     * @param request 分页及筛选条件，pageNo 与 pageSize 须非 null
+     * @return 筛选后的分页结果，每条记录使用与详情接口相同的配置展示口径
      */
-    public PageResult<NamespaceResponse> pageNamespaces(long pageNo, long pageSize, String keyword, Integer status, Integer idMode) {
-
-        Assert.isFalse(status != null && !NamespaceStatusEnum.contains(status), BusinessErrorCode.NAMESPACE_STATUS_INVALID);
-        Assert.isFalse(idMode != null && !NamespaceIdModeEnum.contains(idMode), BizException.supplier(BusinessErrorCode.NAMESPACE_CONFIG_INVALID));
-
-        Page<NamespaceDO> page = namespaceService.pageNamespaces(Math.max(pageNo, 1), Math.min(Math.max(pageSize, 1), 100), keyword, status, idMode);
-
-        List<NamespaceResponse> records = page.getRecords().stream().map(this::toResponse).toList();
+    public PageResult<NamespaceResponse> pageNamespaces(NamespacePageQueryRequest request) {
+        Page<NamespaceDO> page = namespaceService.pageNamespaces(request.getPageNo(), request.getPageSize(), request.getKeyword(), request.getStatus(), request.getIdMode());
+        List<NamespaceResponse> records = toResponses(page.getRecords());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), records);
     }
 
@@ -108,7 +92,7 @@ public class NamespaceManager {
      * 查询 Namespace 详情。
      */
     public NamespaceResponse getNamespace(Long id) {
-        return toResponse(requireNamespace(id));
+        return loadResponse(requireNamespace(id));
     }
 
     /**
@@ -138,9 +122,8 @@ public class NamespaceManager {
         NamespaceConfigDO draftConfig = namespaceSnapshotSupport.buildDraftConfig(namespace.getId(), request.getIdMode(), normalizedConfig);
         namespaceConfigService.create(draftConfig);
 
-        createChangeLog(namespace.getId(), 0, NamespaceChangeActionEnum.CREATE, null,
-                namespaceSnapshotSupport.snapshot(namespace, draftConfig));
-        return toResponse(requireNamespace(namespace.getId()));
+        createChangeLog(namespace.getId(), 0, NamespaceChangeActionEnum.CREATE, null, namespaceSnapshotSupport.snapshot(namespace, draftConfig));
+        return loadResponse(namespace);
     }
 
     /**
@@ -157,7 +140,7 @@ public class NamespaceManager {
         NamespaceDO latest = requireNamespace(id);
         createChangeLog(id, latest.getCurrentVersion(), NamespaceChangeActionEnum.UPDATE, before,
                 namespaceSnapshotSupport.snapshot(latest, namespaceConfigService.getEditingConfig(id)));
-        return toResponse(latest);
+        return loadResponse(latest);
     }
 
     /**
@@ -189,7 +172,7 @@ public class NamespaceManager {
         NamespaceDO latest = requireNamespace(id);
         createChangeLog(id, latest.getCurrentVersion(), NamespaceChangeActionEnum.SAVE_DRAFT, before,
                 namespaceSnapshotSupport.snapshot(latest, namespaceConfigService.getEditingConfig(id)));
-        return toResponse(latest);
+        return loadResponse(latest);
     }
 
     /**
@@ -206,7 +189,10 @@ public class NamespaceManager {
         namespaceConfigHandlerRegistry.normalize(
                 editingConfig.getIdMode(), namespaceSnapshotSupport.readJson(editingConfig.getConfigJson()));
 
-        int nextVersion = namespace.getCurrentVersion() + 1;
+        int maxVersion = namespaceConfigService.getMaxPublishedVersion(id);
+        Assert.isTrue(maxVersion < Integer.MAX_VALUE,
+                BizException.supplier(BusinessErrorCode.NAMESPACE_PUBLISH_FAILED.getCode(), "namespace version exhausted"));
+        int nextVersion = maxVersion + 1;
 
         String before =
                 namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
@@ -238,7 +224,7 @@ public class NamespaceManager {
         createChangeLog(id, nextVersion, NamespaceChangeActionEnum.PUBLISH, before, snapshot);
 
         notifyChangeAfterCommit(namespace.getNamespaceCode(), nextVersion, NamespaceChangeActionEnum.PUBLISH);
-        return toResponse(requireNamespace(id));
+        return loadResponse(requireNamespace(id));
     }
 
     /**
@@ -253,7 +239,7 @@ public class NamespaceManager {
         String before =
                 namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
         if (NamespaceStatusEnum.ENABLED.getCode().equals(namespace.getStatus())) {
-            return toResponse(namespace);
+            return loadResponse(namespace);
         }
         boolean updated = namespaceService.updateStatus(
                 id,
@@ -265,7 +251,7 @@ public class NamespaceManager {
                 namespaceSnapshotSupport.snapshot(
                         requireNamespace(id), namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion())));
         notifyChangeAfterCommit(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.ENABLE);
-        return toResponse(requireNamespace(id));
+        return loadResponse(requireNamespace(id));
     }
 
     /**
@@ -276,7 +262,7 @@ public class NamespaceManager {
         NamespaceDO namespace = requireNamespace(id);
         String before = namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
         if (NamespaceStatusEnum.DISABLED.getCode().equals(namespace.getStatus())) {
-            return toResponse(namespace);
+            return loadResponse(namespace);
         }
         boolean updated = namespaceService.updateStatus(
                 id,
@@ -288,7 +274,7 @@ public class NamespaceManager {
                 namespaceSnapshotSupport.snapshot(
                         requireNamespace(id), namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion())));
         notifyChangeAfterCommit(namespace.getNamespaceCode(), namespace.getCurrentVersion(), NamespaceChangeActionEnum.DISABLE);
-        return toResponse(requireNamespace(id));
+        return loadResponse(requireNamespace(id));
     }
 
     /**
@@ -300,7 +286,7 @@ public class NamespaceManager {
         NamespaceConfigDO targetConfig = namespaceConfigService.getPublishedConfig(id, version);
         Assert.notNull(targetConfig, BizException.supplier(BusinessErrorCode.NAMESPACE_VERSION_NOT_FOUND));
         if (version.equals(namespace.getCurrentVersion())) {
-            return toResponse(namespace);
+            return loadResponse(namespace);
         }
         String before =
                 namespaceSnapshotSupport.snapshot(namespace, namespaceConfigService.getPublishedConfig(id, namespace.getCurrentVersion()));
@@ -311,7 +297,7 @@ public class NamespaceManager {
         createChangeLog(id, version, NamespaceChangeActionEnum.ROLLBACK, before,
                 namespaceSnapshotSupport.snapshot(rollbackNamespace, targetConfig));
         notifyChangeAfterCommit(namespace.getNamespaceCode(), version, NamespaceChangeActionEnum.ROLLBACK);
-        return toResponse(requireNamespace(id));
+        return loadResponse(requireNamespace(id));
     }
 
     /**
@@ -383,16 +369,55 @@ public class NamespaceManager {
         namespaceChangeLogService.create(changeLog);
     }
 
-    private NamespaceResponse toResponse(NamespaceDO namespace) {
-        NamespaceConfigDO draftConfig = namespaceConfigService.getEditingConfig(namespace.getId());
-        NamespaceConfigDO publishedConfig = namespaceConfigService.getPublishedConfig(namespace.getId(), namespace.getCurrentVersion());
+    /**
+     * 批量加载当前页的两类配置，保持主记录顺序，避免转换循环逐条访问数据库。
+     *
+     * @param namespaces 当前页 Namespace 主记录
+     * @return 按原顺序装配的管理端响应；空页不查询配置
+     */
+    private List<NamespaceResponse> toResponses(List<NamespaceDO> namespaces) {
+        if (namespaces.isEmpty()) {
+            return List.of();
+        }
+        List<Long> namespaceIds = namespaces.stream().map(NamespaceDO::getId).toList();
+        Map<Long, Integer> versions = namespaces.stream()
+                .filter(namespace -> namespace.getCurrentVersion() != null && namespace.getCurrentVersion() > 0)
+                .collect(Collectors.toMap(NamespaceDO::getId, NamespaceDO::getCurrentVersion));
+        Map<Long, NamespaceConfigDO> drafts = namespaceConfigService.listEditingConfigs(namespaceIds).stream()
+                .collect(Collectors.toMap(NamespaceConfigDO::getNamespaceId, Function.identity(), (latest, older) -> latest));
+        Map<Long, NamespaceConfigDO> published = versions.isEmpty() ? Map.of()
+                : namespaceConfigService.listPublishedConfigsByVersions(versions).stream()
+                .collect(Collectors.toMap(NamespaceConfigDO::getNamespaceId, Function.identity(), (latest, older) -> latest));
+        return namespaces.stream()
+                .map(namespace -> toResponse(namespace, drafts.get(namespace.getId()), published.get(namespace.getId())))
+                .toList();
+    }
 
+    /**
+     * 为详情及单条管理操作加载配置，单条查询不进入分页装配循环。
+     *
+     * @param namespace 待展示的 Namespace 主记录
+     * @return 与分页列表字段语义一致的管理端响应
+     */
+    private NamespaceResponse loadResponse(NamespaceDO namespace) {
+        return toResponse(namespace, namespaceConfigService.getEditingConfig(namespace.getId()), namespaceConfigService.getPublishedConfig(namespace.getId(), namespace.getCurrentVersion()));
+    }
+
+    /**
+     * 将已加载的主记录与两类配置转换为响应，不访问数据库。
+     *
+     * <p>草稿取最新 EDITING 记录；发布配置严格按 currentVersion 读取，不能用历史最大版本替代，
+     * 否则回滚后会展示错误配置。两者独立返回，缺失时不互相回填。
+     *
+     * @param namespace       待展示的 Namespace 主记录
+     * @param draftConfig     最新编辑态配置，不存在时为 null
+     * @param publishedConfig currentVersion 对应的发布配置，不存在时为 null
+     * @return 基础信息、状态名称、草稿配置与当前版本发布配置
+     * @throws BizException 配置 JSON 无法解析，错误码为 NAMESPACE_CONFIG_INVALID
+     */
+    private NamespaceResponse toResponse(NamespaceDO namespace, NamespaceConfigDO draftConfig, NamespaceConfigDO publishedConfig) {
         JsonNode draftConfigNode = draftConfig == null ? null : namespaceSnapshotSupport.readJson(draftConfig.getConfigJson());
-
-        JsonNode publishedConfigNode = Optional.ofNullable(publishedConfig)
-                .map(e -> namespaceSnapshotSupport.readJson(e.getConfigJson())).orElse(null);
-
-
+        JsonNode publishedConfigNode = publishedConfig == null ? null : namespaceSnapshotSupport.readJson(publishedConfig.getConfigJson());
         return NamespaceConvert.INSTANCE.toResponse(namespace, draftConfigNode, publishedConfigNode);
     }
 
